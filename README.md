@@ -8,6 +8,24 @@ Once the subtitles are written to the `.srt` file, I recommend you to open it wi
 - Check for the model output (if you did not use the `-debug` flag)
 - Optimize it with the "Tools > Fix common errors" utility
 
+```
+Usage of ./pgs-ai-ocr:
+  -debug
+        Print each entry to stdout during the process
+  -input string
+        PGS file to parse (.sup)
+  -italic
+        Instruct the model to detect italic text. Not all models manage to do that properly.
+  -model string
+        AI model to use for OCR. Must be a Vision Language model. (default "o1-mini")
+  -output string
+        Output subtitle to create (.srt subtitle)
+  -timeout duration
+        Timeout for the OpenAI API requests (default 30s)
+  -version
+        show program version
+```
+
 ### Simple (OpenAI)
 
 #### Linux/MacOS
@@ -49,7 +67,6 @@ set OAI_BASE_URL=http://127.0.0.1:8000/v1
 :: you can validate with the following cmd: echo %OAI_BASE_URL%
 .\pgs-ai-ocr.exe -model "Qwen/Qwen2.5-VL-7B-Instruct" -input C:\path\to\input\pgs\subtitle\file.sup -output C:\path\to\output\subtitle\file.srt -debug
 ```
-
 
 ## Thanks
 
