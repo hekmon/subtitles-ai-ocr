@@ -5,10 +5,11 @@ Extract PGS subtitles and recover text using an external (with OpenAI API) Visio
 ## Usage
 
 Once the subtitles are written to the `.srt` file, I recommend you to open it with [Subtitle Edit](https://github.com/SubtitleEdit/subtitleedit) to:
+
 - Check for the model output (if you did not use the `-debug` flag)
 - Optimize it with the "Tools > Fix common errors" utility
 
-```
+```raw
 Usage of ./pgs-ai-ocr:
   -debug
         Print each entry to stdout during the process
@@ -33,7 +34,7 @@ Usage of ./pgs-ai-ocr:
 ```bash
 export OAI_API_KEY="your_openai_api_key_here"
 # you can validate with the following cmd: echo $OAI_API_KEY
-./pgs-ai-ocr -italic -input /path/to/input/pgs/subtitle/file.sup -output /path/to/output/subtitle/file.srt -debug
+./pgs-ai-ocr -input /path/to/input/pgs/subtitle/file.sup -output /path/to/output/subtitle/file.srt -debug
 ```
 
 #### Windows
@@ -70,4 +71,4 @@ set OAI_BASE_URL=http://127.0.0.1:8000/v1
 
 ## Thanks
 
-* [@mbiamont](https://github.com/mbiamont) and its [go-pgs-parser](https://github.com/mbiamont/go-pgs-parser) library
+[@mbiamont](https://github.com/mbiamont) and its [go-pgs-parser](https://github.com/mbiamont/go-pgs-parser) library
