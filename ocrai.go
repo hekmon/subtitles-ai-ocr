@@ -17,9 +17,13 @@ const (
 	systemPrompt = `Extract the text from the user's input.
 Do not use quotes, do not provide comments, and do not add any additional content beyond the extracted text from the image.
 Maintain the original formatting and line breaks without adding extra spaces or line breaks.`
+	italicPrompt = `When formatting text, if a single word is in italics, use the following format to mark it:
+<i>word</i>
+If multiple consecutive words are in italics, use the following format:
+non_italic_word_1 <i>italic_word_1 italic_word_2 ... italic_word_n</i> non_italic_word_2`
 )
 
-func OCR(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model string, debug bool) (txtSubs []SRTSubtitle, err error) {
+func OCR(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs []SRTSubtitle, err error) {
 	// Progress bar
 	var (
 		totalPromptTokens     int64
@@ -62,7 +66,7 @@ func OCR(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model
 		completionTokens int64
 	)
 	for index, pg := range imgSubs {
-		if text, promptTokens, completionTokens, err = ExtractText(ctx, client, model, pg.Image); err != nil {
+		if text, promptTokens, completionTokens, err = ExtractText(ctx, client, model, pg.Image, italic); err != nil {
 			err = fmt.Errorf("failed to extract text from image #%d: %s\n", index+1, err)
 			return
 		}
@@ -81,7 +85,7 @@ func OCR(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model
 	return
 }
 
-func ExtractText(ctx context.Context, client openai.Client, model string, img image.Image) (text string, promptTokens, completionTokens int64, err error) {
+func ExtractText(ctx context.Context, client openai.Client, model string, img image.Image, italic bool) (text string, promptTokens, completionTokens int64, err error) {
 	// Encode Image
 	encodedImage, err := encodeImageToDataURL(img)
 	if err != nil {
@@ -89,26 +93,28 @@ func ExtractText(ctx context.Context, client openai.Client, model string, img im
 		return
 	}
 	// Ask model for text extraction
+	content := make([]openai.ChatCompletionContentPartUnionParam, 0, 2)
+	if italic {
+		content = append(content, openai.ChatCompletionContentPartUnionParam{
+			OfText: &openai.ChatCompletionContentPartTextParam{
+				Text: italicPrompt,
+			},
+		})
+	}
+	content = append(content, openai.ChatCompletionContentPartUnionParam{
+		OfImageURL: &openai.ChatCompletionContentPartImageParam{
+			ImageURL: openai.ChatCompletionContentPartImageImageURLParam{
+				URL: encodedImage,
+			},
+		},
+	})
 	chatCompletion, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage(systemPrompt),
 			{
 				OfUser: &openai.ChatCompletionUserMessageParam{
 					Content: openai.ChatCompletionUserMessageParamContentUnion{
-						OfArrayOfContentParts: []openai.ChatCompletionContentPartUnionParam{
-							// {
-							// 	OfText: &openai.ChatCompletionContentPartTextParam{
-							// 		Text: "extract the text from this image",
-							// 	},
-							// },
-							{
-								OfImageURL: &openai.ChatCompletionContentPartImageParam{
-									ImageURL: openai.ChatCompletionContentPartImageImageURLParam{
-										URL: encodedImage,
-									},
-								},
-							},
-						},
+						OfArrayOfContentParts: content,
 					},
 				},
 			},

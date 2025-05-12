@@ -27,8 +27,9 @@ func main() {
 	inputPath := flag.String("input", "", "PGS file to parse (.sup)")
 	outputPath := flag.String("output", "", "Output subtitle to create (.srt subtitle)")
 	model := flag.String("model", openai.ChatModelO1Mini, "AI model to use for OCR. Must be a Vision Language model.")
-	debug := flag.Bool("debug", false, "Print each entry to stdout during the process")
+	italic := flag.Bool("italic", false, "Instruct the model to detect italic text. Not all models manage to do that properly.")
 	timeout := flag.Duration("timeout", 30*time.Second, "Timeout for the OpenAI API requests")
+	debug := flag.Bool("debug", false, "Print each entry to stdout during the process")
 	flag.Parse()
 
 	// Checks the flags
@@ -100,7 +101,7 @@ func main() {
 	// Step 2 - OCR with AI
 	liveprogress.RefreshInterval = 500 * time.Millisecond
 	start := time.Now()
-	srtSubs, err := OCR(runCtx, imgSubs, oaiClient, *model, *debug)
+	srtSubs, err := OCR(runCtx, imgSubs, oaiClient, *model, *italic, *debug)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "OCR failed: %s\n", err)
 		return
