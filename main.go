@@ -20,6 +20,9 @@ import (
 const (
 	APIKEY_ENV  = "OAI_API_KEY"
 	BASEURL_ENV = "OAI_BASE_URL"
+
+	//  overrided during compilation
+	Version = "dev"
 )
 
 func main() {
@@ -30,9 +33,14 @@ func main() {
 	italic := flag.Bool("italic", false, "Instruct the model to detect italic text. Not all models manage to do that properly.")
 	timeout := flag.Duration("timeout", 30*time.Second, "Timeout for the OpenAI API requests")
 	debug := flag.Bool("debug", false, "Print each entry to stdout during the process")
+	version := flag.Bool("version", false, "show program version")
 	flag.Parse()
 
 	// Checks the flags
+	if *version {
+		fmt.Printf("Version: %s\n", Version)
+		return
+	}
 	if *inputPath == "" {
 		fmt.Fprintf(os.Stderr, "Please set the -input flag\n\n")
 		flag.Usage()
