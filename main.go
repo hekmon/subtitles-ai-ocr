@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
@@ -23,7 +24,7 @@ const (
 func main() {
 	// Define flags
 	inputPath := flag.String("input", "", "PGS file to parse (.sup)")
-	outputPath := flag.String("output", "", "Output subtitle to create (srt subtitle)")
+	outputPath := flag.String("output", "", "Output subtitle to create (.srt subtitle)")
 	model := flag.String("model", openai.ChatModelO1Mini, "AI model to use for OCR. Must be a Vision Language model.")
 	debug := flag.Bool("debug", false, "Print each entry to stdout during the process")
 	flag.Parse()
@@ -33,7 +34,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Please set the -input flag\n\n")
 		flag.Usage()
 		return
-	} else if strings.HasSuffix(*inputPath, ".sup") {
+	} else if !strings.HasSuffix(*inputPath, ".sup") {
 		fmt.Fprintf(os.Stderr, "The input file must be a .sup file\n")
 		return
 	}
@@ -48,7 +49,8 @@ func main() {
 
 	// Initiate the openai client
 	var err error
-	oaiOptions := make([]option.RequestOption, 0, 2)
+	oaiOptions := make([]option.RequestOption, 1, 3)
+	oaiOptions[0] = option.WithRequestTimeout(30 * time.Second)
 	oaiAPIKey, found := os.LookupEnv(APIKEY_ENV)
 	if found {
 		oaiOptions = append(oaiOptions, option.WithAPIKey(oaiAPIKey))
@@ -86,9 +88,8 @@ func main() {
 			fmt.Printf("Start: %v, End: %v, Size: %d×%v\n",
 				sub.StartTime, sub.EndTime, sub.Image.Bounds().Dx(), sub.Image.Bounds().Dy())
 		}
-		fmt.Println()
 	}
-	fmt.Println("Parsed PGS file. Total subs:", len(imgSubs))
+	fmt.Println("PGS file parsed successfully. Total subs:", len(imgSubs))
 
 	// Prepare clean stop
 	runCtx, runCtxStopFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

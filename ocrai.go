@@ -14,7 +14,9 @@ import (
 )
 
 const (
-	systemPrompt = `Extract the text from the user input. Do not quote, do not say anything but the text.`
+	systemPrompt = `Extract the text from the user's input.
+Do not use quotes, do not provide comments, and do not add any additional content beyond the extracted text from the image.
+Maintain the original formatting and line breaks without adding extra spaces or line breaks.`
 )
 
 func OCR(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model string, debug bool) (txtSubs []SRTSubtitle, err error) {
