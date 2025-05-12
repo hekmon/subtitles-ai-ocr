@@ -41,7 +41,7 @@ func OCR(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model
 		if err := liveprogress.Stop(clear); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to stop live progress: %s\n", err)
 		}
-		fmt.Printf("VL model tokens used: prompt=%d, completion=%d\n", totalPromptTokens, totalCompletionTokens)
+		fmt.Printf("%s model tokens used: prompt=%d, completion=%d\n", model, totalPromptTokens, totalCompletionTokens)
 	}()
 	bar := liveprogress.SetMainLineAsBar(
 		liveprogress.WithTotal(uint64(len(imgSubs))),

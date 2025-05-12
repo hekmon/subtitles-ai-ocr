@@ -92,7 +92,7 @@ func main() {
 				sub.StartTime, sub.EndTime, sub.Image.Bounds().Dx(), sub.Image.Bounds().Dy())
 		}
 	}
-	fmt.Println("PGS file parsed successfully. Total subs:", len(imgSubs))
+	fmt.Println("PGS file parsed. Total subs:", len(imgSubs))
 
 	// Prepare clean stop
 	runCtx, runCtxStopFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
