@@ -15,6 +15,26 @@ const (
 	systemPrompt = `Extract the text from the user input. Do not quote, do not say anything but the text.`
 )
 
+func OCR(ctx context.Context, imgSubs []*PGSSubtitle, client openai.Client, model string, debug bool) (txtSubs []SRTSubtitle, err error) {
+	txtSubs = make([]SRTSubtitle, len(imgSubs))
+	var text string
+	for index, pg := range imgSubs {
+		if text, err = ExtractText(ctx, client, model, pg.Image); err != nil {
+			err = fmt.Errorf("Failed to extract text from image #%d: %s\n", index+1, err)
+			return
+		}
+		if debug {
+			fmt.Printf("#%d %s --> %s\n%s\n\n", index+1, pg.StartTime, pg.EndTime, text)
+		}
+		txtSubs[index] = SRTSubtitle{
+			Start: SRTTimestamp(pg.StartTime),
+			End:   SRTTimestamp(pg.EndTime),
+			Text:  text,
+		}
+	}
+	return
+}
+
 func ExtractText(ctx context.Context, client openai.Client, model string, img image.Image) (text string, err error) {
 	// Encode Image
 	encodedImage, err := encodeImageToDataURL(img)
@@ -22,7 +42,7 @@ func ExtractText(ctx context.Context, client openai.Client, model string, img im
 		err = fmt.Errorf("failed to encode image to data URL: %w", err)
 		return
 	}
-	// Ask AI
+	// Ask model for text extraction
 	chatCompletion, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage(systemPrompt),
@@ -50,7 +70,7 @@ func ExtractText(ctx context.Context, client openai.Client, model string, img im
 		Model: model,
 	})
 	if err != nil {
-		err = fmt.Errorf("failed to get chat completion: %w", err)
+		err = fmt.Errorf("failed to get OCR chat completion: %w", err)
 		return
 	}
 	text = chatCompletion.Choices[0].Message.Content

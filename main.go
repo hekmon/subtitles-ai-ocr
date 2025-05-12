@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 
@@ -65,10 +66,6 @@ func main() {
 	}
 	oaiClient := openai.NewClient(oaiOptions...)
 
-	// Prepare clean stop
-	runCtx, runCtxStopFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer runCtxStopFunc()
-
 	// Check if we can create the output file now to avoid loosing the extraction if we can not save it afterwards
 	var fd *os.File
 	if fd, err = os.Create(*outputPath); err != nil {
@@ -78,26 +75,34 @@ func main() {
 	defer fd.Close()
 
 	// Step 1 - Parse PGS file
-	subs, err := ParsePGSFile(*inputPath)
+	fmt.Printf("Parsing PGS file %q\n", filepath.Base(*inputPath))
+	imgSubs, err := ParsePGSFile(*inputPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to parse PGS file: %s\n", err)
 		return
 	}
 	if *debug {
-		for _, sub := range subs {
+		for _, sub := range imgSubs {
 			fmt.Printf("Start: %v, End: %v, Size: %d×%v\n",
 				sub.StartTime, sub.EndTime, sub.Image.Bounds().Dx(), sub.Image.Bounds().Dy())
 		}
+		fmt.Println()
 	}
-	fmt.Println("Total subs:", len(subs))
+	fmt.Println("Parsed PGS file. Total subs:", len(imgSubs))
+
+	// Prepare clean stop
+	runCtx, runCtxStopFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer runCtxStopFunc()
 
 	// Step 2 - OCR with AI
-	var text string
-	for index, pg := range subs {
-		if text, err = ExtractText(runCtx, oaiClient, *model, pg.Image); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to extract text from image: %s\n", err)
-			return
-		}
-		fmt.Printf("#%d %s --> %s\n%s\n\n", index+1, pg.StartTime, pg.EndTime, text)
+	srtSubs, err := OCR(runCtx, imgSubs, oaiClient, *model, *debug)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "OCR failed: %s\n", err)
+		return
 	}
+	if err = WriteSRT(fd, srtSubs); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write SRT: %s\n", err)
+		return
+	}
+	fmt.Println("OCR complete. SRT written to", *outputPath)
 }

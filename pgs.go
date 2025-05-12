@@ -9,14 +9,14 @@ import (
 	"github.com/mbiamont/go-pgs-parser/pgs"
 )
 
-type CompletePGSSub struct {
+type PGSSubtitle struct {
 	Image     image.Image
 	StartTime time.Duration
 	EndTime   time.Duration
 }
 
-func ParsePGSFile(filePath string) (subs []*CompletePGSSub, err error) {
-	var currentSub *CompletePGSSub
+func ParsePGSFile(filePath string) (subs []*PGSSubtitle, err error) {
+	var currentSub *PGSSubtitle
 	err = pgs.NewPgsParser().ParseDisplaySets(filePath, func(data displaySet.DisplaySet, startTime time.Duration) error {
 		// Check if this display set contains an image or only metadata
 		imageData, err := data.ToImageData()
@@ -28,7 +28,7 @@ func ParsePGSFile(filePath string) (subs []*CompletePGSSub, err error) {
 			if currentSub != nil {
 				return errors.New("got an image without a previous end time for the previous sub")
 			}
-			currentSub = &CompletePGSSub{
+			currentSub = &PGSSubtitle{
 				Image:     imageData.Image,
 				StartTime: startTime,
 			}
