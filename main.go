@@ -24,8 +24,8 @@ func main() {
 	// Define flags
 	inputPath := flag.String("input", "", "PGS file to parse (.sup)")
 	outputPath := flag.String("output", "", "Output subtitle to create (srt subtitle)")
-	model := flag.String("model", openai.ChatModelO1Mini, "AI model to use for translation")
-	debug := flag.Bool("debug", false, "Print each translated entry to stdout during the process")
+	model := flag.String("model", openai.ChatModelO1Mini, "AI model to use for OCR. Must be a Vision Language model.")
+	debug := flag.Bool("debug", false, "Print each entry to stdout during the process")
 	flag.Parse()
 
 	// Checks the input file
