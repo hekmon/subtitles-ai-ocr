@@ -17,12 +17,18 @@ const (
 
 func OCR(ctx context.Context, imgSubs []*PGSSubtitle, client openai.Client, model string, debug bool) (txtSubs []SRTSubtitle, err error) {
 	txtSubs = make([]SRTSubtitle, len(imgSubs))
-	var text string
+	var (
+		text                                    string
+		promptTokens, totalPromptTokens         int64
+		completionTokens, totalCompletionTokens int64
+	)
 	for index, pg := range imgSubs {
-		if text, err = ExtractText(ctx, client, model, pg.Image); err != nil {
-			err = fmt.Errorf("Failed to extract text from image #%d: %s\n", index+1, err)
+		if text, promptTokens, completionTokens, err = ExtractText(ctx, client, model, pg.Image); err != nil {
+			err = fmt.Errorf("failed to extract text from image #%d: %s\n", index+1, err)
 			return
 		}
+		totalPromptTokens += promptTokens
+		totalCompletionTokens += completionTokens
 		if debug {
 			fmt.Printf("#%d %s --> %s\n%s\n\n", index+1, pg.StartTime, pg.EndTime, text)
 		}
@@ -32,10 +38,11 @@ func OCR(ctx context.Context, imgSubs []*PGSSubtitle, client openai.Client, mode
 			Text:  text,
 		}
 	}
+	fmt.Printf("VL model tokens used: prompt=%d, completion=%d\n", totalPromptTokens, totalCompletionTokens)
 	return
 }
 
-func ExtractText(ctx context.Context, client openai.Client, model string, img image.Image) (text string, err error) {
+func ExtractText(ctx context.Context, client openai.Client, model string, img image.Image) (text string, promptTokens, completionTokens int64, err error) {
 	// Encode Image
 	encodedImage, err := encodeImageToDataURL(img)
 	if err != nil {
@@ -74,6 +81,8 @@ func ExtractText(ctx context.Context, client openai.Client, model string, img im
 		return
 	}
 	text = chatCompletion.Choices[0].Message.Content
+	promptTokens = chatCompletion.Usage.PromptTokens
+	completionTokens = chatCompletion.Usage.CompletionTokens
 	return
 }
 
