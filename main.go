@@ -29,8 +29,8 @@ func main() {
 	// Define flags
 	inputPath := flag.String("input", "", "PGS file to parse (.sup)")
 	outputPath := flag.String("output", "", "Output subtitle to create (.srt subtitle)")
-	model := flag.String("model", openai.ChatModelGPT4o, "AI model to use for OCR. Must be a Vision Language model.")
-	italic := flag.Bool("italic", false, "Instruct the model to detect italic text. Not all models manage to do that properly.")
+	model := flag.String("model", "gpt-4.1-nano-2025-04-14", "AI model to use for OCR. Must be a Vision Language model.")
+	italic := flag.Bool("italic", false, "Instruct the model to detect italic text. So far no models managed to detect it properly.")
 	timeout := flag.Duration("timeout", 30*time.Second, "Timeout for the OpenAI API requests")
 	debug := flag.Bool("debug", false, "Print each entry to stdout during the process")
 	version := flag.Bool("version", false, "show program version")
