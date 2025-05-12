@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hekmon/liveprogress/v2"
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 )
@@ -27,9 +28,10 @@ func main() {
 	outputPath := flag.String("output", "", "Output subtitle to create (.srt subtitle)")
 	model := flag.String("model", openai.ChatModelO1Mini, "AI model to use for OCR. Must be a Vision Language model.")
 	debug := flag.Bool("debug", false, "Print each entry to stdout during the process")
+	timeout := flag.Duration("timeout", 30*time.Second, "Timeout for the OpenAI API requests")
 	flag.Parse()
 
-	// Checks the input file
+	// Checks the flags
 	if *inputPath == "" {
 		fmt.Fprintf(os.Stderr, "Please set the -input flag\n\n")
 		flag.Usage()
@@ -50,7 +52,7 @@ func main() {
 	// Initiate the openai client
 	var err error
 	oaiOptions := make([]option.RequestOption, 1, 3)
-	oaiOptions[0] = option.WithRequestTimeout(30 * time.Second)
+	oaiOptions[0] = option.WithRequestTimeout(*timeout)
 	oaiAPIKey, found := os.LookupEnv(APIKEY_ENV)
 	if found {
 		oaiOptions = append(oaiOptions, option.WithAPIKey(oaiAPIKey))
@@ -96,14 +98,17 @@ func main() {
 	defer runCtxStopFunc()
 
 	// Step 2 - OCR with AI
+	liveprogress.RefreshInterval = 500 * time.Millisecond
+	start := time.Now()
 	srtSubs, err := OCR(runCtx, imgSubs, oaiClient, *model, *debug)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "OCR failed: %s\n", err)
 		return
 	}
+	fmt.Printf("OCR completed in %v\n", time.Since(start))
 	if err = WriteSRT(fd, srtSubs); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to write SRT: %s\n", err)
 		return
 	}
-	fmt.Println("OCR complete. SRT written to", *outputPath)
+	fmt.Printf("SRT written to %q\n", *outputPath)
 }
