@@ -4,6 +4,10 @@ Extract PGS subtitles and recover text using an external (with OpenAI API) Visio
 
 ## Usage
 
+Once the subtitles are written to the `.srt` file, I recommend you to open it with [Subtitle Edit](https://github.com/SubtitleEdit/subtitleedit) to:
+- Check for the model output (if you did not use the `-debug` flag)
+- Run the "Tools > Fix common errors" utility to optimize it
+
 ### Simple (OpenAI)
 
 #### Linux/MacOS
