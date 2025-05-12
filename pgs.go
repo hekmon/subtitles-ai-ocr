@@ -15,7 +15,7 @@ type PGSSubtitle struct {
 	EndTime   time.Duration
 }
 
-func ParsePGSFile(filePath string) (subs []*PGSSubtitle, err error) {
+func ParsePGSFile(filePath string) (subs []PGSSubtitle, err error) {
 	var currentSub *PGSSubtitle
 	err = pgs.NewPgsParser().ParseDisplaySets(filePath, func(data displaySet.DisplaySet, startTime time.Duration) error {
 		// Check if this display set contains an image or only metadata
@@ -38,7 +38,7 @@ func ParsePGSFile(filePath string) (subs []*PGSSubtitle, err error) {
 				return errors.New("got an end time without a previous start time for a previous sub")
 			}
 			currentSub.EndTime = startTime
-			subs = append(subs, currentSub)
+			subs = append(subs, *currentSub)
 			currentSub = nil
 		}
 		return nil
