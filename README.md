@@ -32,8 +32,8 @@ Usage of ./pgs-ai-ocr:
 #### Linux/MacOS
 
 ```bash
-export OAI_API_KEY="your_openai_api_key_here"
-# you can validate with the following cmd: echo $OAI_API_KEY
+export OPENAI_API_KEY="your_openai_api_key_here"
+# you can validate with the following cmd: echo $OPENAI_API_KEY
 ./pgs-ai-ocr -input /path/to/input/pgs/subtitle/file.sup -output /path/to/output/subtitle/file.srt -debug
 ```
 
@@ -42,8 +42,8 @@ export OAI_API_KEY="your_openai_api_key_here"
 Using the command line (`cmd.exe`):
 
 ```bat
-set OAI_API_KEY=your_openai_api_key_here
-:: you can validate with the following cmd: echo %OAI_API_KEY%
+set OPENAI_API_KEY=your_openai_api_key_here
+:: you can validate with the following cmd: echo %OPENAI_API_KEY%
 .\pgs-ai-ocr.exe -italic -input C:\path\to\input\pgs\subtitle\file.sup -output C:\path\to\output\subtitle\file.srt -debug
 ```
 
@@ -54,9 +54,8 @@ For local inference [Qwen2.5-VL 7B](https://huggingface.co/Qwen/Qwen2.5-VL-7B-In
 #### Linux/MacOS
 
 ```bash
-export OAI_BASE_URL="http://127.0.0.1:8000/v1" # vLLM endpoint
-# you can validate with the following cmd: echo $OAI_BASE_URL
-./pgs-ai-ocr -model "Qwen/Qwen2.5-VL-7B-Instruct" -input /path/to/input/pgs/subtitle/file.sup -output /path/to/output/subtitle/file.srt -debug
+# using vLLM
+./pgs-ai-ocr -baseurl http://127.0.0.1:8000/v1 -model "Qwen/Qwen2.5-VL-7B-Instruct" -input /path/to/input/pgs/subtitle/file.sup -output /path/to/output/subtitle/file.srt -debug
 ```
 
 #### Windows
@@ -64,9 +63,8 @@ export OAI_BASE_URL="http://127.0.0.1:8000/v1" # vLLM endpoint
 Using the command line (`cmd.exe`):
 
 ```bat
-set OAI_BASE_URL=http://127.0.0.1:8000/v1
-:: you can validate with the following cmd: echo %OAI_BASE_URL%
-.\pgs-ai-ocr.exe -model "Qwen/Qwen2.5-VL-7B-Instruct" -input C:\path\to\input\pgs\subtitle\file.sup -output C:\path\to\output\subtitle\file.srt -debug
+:: using vLLM
+.\pgs-ai-ocr.exe -baseurl http://127.0.0.1:8000/v1 -model "Qwen/Qwen2.5-VL-7B-Instruct" -input C:\path\to\input\pgs\subtitle\file.sup -output C:\path\to\output\subtitle\file.srt -debug
 ```
 
 ## Thanks
