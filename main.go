@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	APIKEY_ENV = "OAI_API_KEY"
+	APIKEY_ENV = "OPENAI_API_KEY" // default from openai client
 
 	//  overrided during compilation
 	Version = "dev"
@@ -36,7 +36,7 @@ func main() {
 	version := flag.Bool("version", false, "show program version")
 	flag.Parse()
 
-	// Checks the flags
+	// Checks params
 	if *version {
 		fmt.Printf("Version: %s\n", Version)
 		return
@@ -58,22 +58,19 @@ func main() {
 		return
 	}
 	var err error
-	if _, err = url.Parse(*baseURL); err != nil {
+	if _, err := url.Parse(*baseURL); err != nil {
 		fmt.Fprintf(os.Stderr, "Invalid URL for -baseURL flag: %s\n", err.Error())
 		return
 	}
-
-	// Initiate the openai client
-	oaiOptions := make([]option.RequestOption, 2, 3)
-	oaiOptions[0] = option.WithRequestTimeout(*timeout)
-	oaiOptions[1] = option.WithBaseURL(*baseURL)
-	oaiAPIKey, found := os.LookupEnv(APIKEY_ENV)
-	if found {
-		oaiOptions = append(oaiOptions, option.WithAPIKey(oaiAPIKey))
-	} else {
+	if _, found := os.LookupEnv(APIKEY_ENV); !found {
 		fmt.Printf("Environment variable %q not set: OpenAI API client won't be using an API key\n", APIKEY_ENV)
 	}
-	oaiClient := openai.NewClient(oaiOptions...)
+
+	// Initiate the openai client (default options will automatically lookup for OPENAI_API_KEY env var)
+	oaiClient := openai.NewClient(
+		option.WithRequestTimeout(*timeout),
+		option.WithBaseURL(*baseURL),
+	)
 
 	// Check if we can create the output file now to avoid loosing the extraction if we can not save it afterwards
 	var fd *os.File
