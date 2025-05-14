@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	APIKEY_ENV = "OPENAI_API_KEY" // default from openai client
+	APIKEY_ENV  = "OPENAI_API_KEY" // default from openai client
+	OAI_BASEURL = "https://api.openai.com/v1"
 
 	//  overrided during compilation
 	Version = "dev"
@@ -28,9 +29,10 @@ func main() {
 	// Define flags
 	inputPath := flag.String("input", "", "PGS file to parse (.sup)")
 	outputPath := flag.String("output", "", "Output subtitle to create (.srt subtitle)")
-	baseURL := flag.String("baseurl", "https://api.openai.com/v1", "OpenAI API base URL")
+	baseURL := flag.String("baseurl", OAI_BASEURL, "OpenAI API base URL")
 	model := flag.String("model", "gpt-4.1-nano-2025-04-14", "AI model to use for OCR. Must be a Vision Language model.")
 	italic := flag.Bool("italic", false, "Instruct the model to detect italic text. So far no models managed to detect it properly.")
+	batchMode := flag.Bool("batch", false, "OpenAI batch mode. Longer, cheaper.")
 	timeout := flag.Duration("timeout", 10*time.Minute, "Timeout for the OpenAI API requests")
 	debug := flag.Bool("debug", false, "Print each entry to stdout during the process")
 	version := flag.Bool("version", false, "show program version")
@@ -55,6 +57,10 @@ func main() {
 		return
 	} else if !strings.HasSuffix(*outputPath, ".srt") {
 		fmt.Fprintf(os.Stderr, "The output file must be a .srt file\n")
+		return
+	}
+	if *baseURL != OAI_BASEURL && *batchMode {
+		fmt.Fprintf(os.Stderr, "Batch mode is not supported for custom base URLs.\n")
 		return
 	}
 	var err error
@@ -101,13 +107,22 @@ func main() {
 
 	// Step 2 - OCR with AI
 	liveprogress.RefreshInterval = 500 * time.Millisecond
+	var srtSubs SRTSubtitles
 	start := time.Now()
-	srtSubs, err := OCR(runCtx, imgSubs, oaiClient, *model, *italic, *debug)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "OCR failed: %s\n", err)
-		return
+	if *batchMode {
+		if srtSubs, err = OCRBatched(runCtx, imgSubs, oaiClient, *model, *italic, *debug); err != nil {
+			fmt.Fprintf(os.Stderr, "batched OCR failed: %s\n", err)
+			return
+		}
+	} else {
+		if srtSubs, err = OCR(runCtx, imgSubs, oaiClient, *model, *italic, *debug); err != nil {
+			fmt.Fprintf(os.Stderr, "OCR failed: %s\n", err)
+			return
+		}
 	}
 	fmt.Printf("OCR completed in %v\n", time.Since(start))
+
+	// Step 3 - Write SRT file
 	if err = srtSubs.Marshal(fd); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to write SRT: %s\n", err)
 		return
