@@ -23,7 +23,7 @@ If multiple consecutive words are in italics, use the following format:
 non_italic_word_1 <i>italic_word_1 italic_word_2 ... italic_word_n</i> non_italic_word_2`
 )
 
-func OCR(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs []SRTSubtitle, err error) {
+func OCR(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
 	// Progress bar
 	var (
 		totalPromptTokens     int64
@@ -59,7 +59,7 @@ func OCR(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model
 	defer liveprogress.RemoveBar(bar)
 	bypass := liveprogress.Bypass()
 	// Process each subtitle image and extract text using OCR.
-	txtSubs = make([]SRTSubtitle, len(imgSubs))
+	txtSubs = make(SRTSubtitles, len(imgSubs))
 	var (
 		text             string
 		promptTokens     int64

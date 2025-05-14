@@ -8,24 +8,9 @@ import (
 	"golang.org/x/text/encoding/unicode"
 )
 
-type SRTSubtitle struct {
-	Start SRTTimestamp
-	End   SRTTimestamp
-	Text  string
-}
+type SRTSubtitles []SRTSubtitle
 
-type SRTTimestamp time.Duration
-
-func (t SRTTimestamp) String() string {
-	return fmt.Sprintf("%02d:%02d:%02d,%03d",
-		time.Duration(t)/time.Hour,
-		(time.Duration(t)/time.Minute)%60,
-		(time.Duration(t)/time.Second)%60,
-		time.Duration(t)%time.Second/time.Millisecond,
-	)
-}
-
-func WriteSRT(output io.Writer, subtitles []SRTSubtitle) (err error) {
+func (subtitles SRTSubtitles) Marshal(output io.Writer) (err error) {
 	encoder := unicode.UTF8BOM.NewEncoder().Writer(output)
 	for i, sub := range subtitles {
 		// Num
@@ -46,4 +31,21 @@ func WriteSRT(output io.Writer, subtitles []SRTSubtitle) (err error) {
 		}
 	}
 	return nil
+}
+
+type SRTSubtitle struct {
+	Start SRTTimestamp
+	End   SRTTimestamp
+	Text  string
+}
+
+type SRTTimestamp time.Duration
+
+func (t SRTTimestamp) String() string {
+	return fmt.Sprintf("%02d:%02d:%02d,%03d",
+		time.Duration(t)/time.Hour,
+		(time.Duration(t)/time.Minute)%60,
+		(time.Duration(t)/time.Second)%60,
+		time.Duration(t)%time.Second/time.Millisecond,
+	)
 }

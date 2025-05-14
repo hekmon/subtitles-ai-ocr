@@ -108,7 +108,7 @@ func main() {
 		return
 	}
 	fmt.Printf("OCR completed in %v\n", time.Since(start))
-	if err = WriteSRT(fd, srtSubs); err != nil {
+	if err = srtSubs.Marshal(fd); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to write SRT: %s\n", err)
 		return
 	}
