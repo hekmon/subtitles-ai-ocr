@@ -17,10 +17,7 @@ const (
 
 func OCRBatched(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
 	// Create the batches
-	var (
-		line string
-		size int
-	)
+	var line string
 	batches := make([][]string, 0, len(imgSubs)/batchMaxRequests+1)
 	currentBatch := make([]string, 0, min(batchMaxRequests, len(imgSubs)))
 	for id, sub := range imgSubs {
@@ -28,10 +25,10 @@ func OCRBatched(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client
 			err = fmt.Errorf("failed to create batch line #%d: %w", id, err)
 			return
 		}
-		size = batchSize(currentBatch, line)
-		if size > batchMaxSize || len(currentBatch) > batchMaxRequests {
+		if batchSize(currentBatch, line) > batchMaxSize || len(currentBatch) >= batchMaxRequests {
 			if debug {
-				fmt.Printf("Creating a new batch. Current batch has %d requests for total size of %d", len(currentBatch), size)
+				fmt.Printf("Creating a new batch. Current batch has %d requests for total size of %d",
+					len(currentBatch), batchSize(currentBatch, ""))
 			}
 			batches = append(batches, currentBatch)
 			currentBatch = make([]string, 0, min(batchMaxRequests, len(imgSubs)-id))
@@ -40,10 +37,10 @@ func OCRBatched(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client
 	}
 	batches = append(batches, currentBatch)
 	if debug {
-		fmt.Printf("Last batch has %d requests for total size of %d", len(currentBatch), size)
+		fmt.Printf("Last batch has %d requests for total size of %d\n",
+			len(currentBatch), batchSize(currentBatch, ""))
 	}
 	// Update the files
-	var uploadedFile *openai.FileObject
 	uploadedFiles := make([]*openai.FileObject, 0, len(batches))
 	defer func() {
 		for i, f := range uploadedFiles {
@@ -61,6 +58,7 @@ func OCRBatched(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client
 			}
 		}
 	}()
+	var uploadedFile *openai.FileObject
 	for i, batch := range batches {
 		// TODO marshall
 		if uploadedFile, err = client.Files.New(ctx, openai.FileNewParams{
@@ -87,7 +85,9 @@ func batchSize(currentBatch []string, newLine string) (totalSize int) {
 	for _, item := range currentBatch {
 		totalSize += len(item) + 1 // +1 for the newline character that will be added later in the JSON array representation.
 	}
-	totalSize += len(newLine) + 1
+	if newLine != "" {
+		totalSize += len(newLine) + 1
+	}
 	return
 }
 
