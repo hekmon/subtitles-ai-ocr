@@ -18,8 +18,7 @@ import (
 )
 
 const (
-	APIKEY_ENV  = "OAI_API_KEY"
-	BASEURL_ENV = "OAI_BASE_URL"
+	APIKEY_ENV = "OAI_API_KEY"
 
 	//  overrided during compilation
 	Version = "dev"
@@ -29,6 +28,7 @@ func main() {
 	// Define flags
 	inputPath := flag.String("input", "", "PGS file to parse (.sup)")
 	outputPath := flag.String("output", "", "Output subtitle to create (.srt subtitle)")
+	baseURL := flag.String("baseurl", "https://api.openai.com/v1", "OpenAI API base URL")
 	model := flag.String("model", "gpt-4.1-nano-2025-04-14", "AI model to use for OCR. Must be a Vision Language model.")
 	italic := flag.Bool("italic", false, "Instruct the model to detect italic text. So far no models managed to detect it properly.")
 	timeout := flag.Duration("timeout", 30*time.Second, "Timeout for the OpenAI API requests")
@@ -57,25 +57,21 @@ func main() {
 		fmt.Fprintf(os.Stderr, "The output file must be a .srt file\n")
 		return
 	}
+	var err error
+	if _, err = url.Parse(*baseURL); err != nil {
+		fmt.Fprintf(os.Stderr, "Invalid URL for -baseURL flag: %s\n", err.Error())
+		return
+	}
 
 	// Initiate the openai client
-	var err error
-	oaiOptions := make([]option.RequestOption, 1, 3)
+	oaiOptions := make([]option.RequestOption, 2, 3)
 	oaiOptions[0] = option.WithRequestTimeout(*timeout)
+	oaiOptions[1] = option.WithBaseURL(*baseURL)
 	oaiAPIKey, found := os.LookupEnv(APIKEY_ENV)
 	if found {
 		oaiOptions = append(oaiOptions, option.WithAPIKey(oaiAPIKey))
 	} else {
 		fmt.Printf("Environment variable %q not set: OpenAI API client won't be using an API key\n", APIKEY_ENV)
-	}
-	oaiBaseURL, found := os.LookupEnv(BASEURL_ENV)
-	if found {
-		if _, err = url.Parse(oaiBaseURL); err != nil {
-			fmt.Fprintf(os.Stderr, "Invalid URL for environment variable %q: %s\n", BASEURL_ENV, err.Error())
-			return
-		}
-		fmt.Printf("Environment variable %q set: client will be using a custom base URL: %s\n", BASEURL_ENV, oaiBaseURL)
-		oaiOptions = append(oaiOptions, option.WithBaseURL(oaiBaseURL))
 	}
 	oaiClient := openai.NewClient(oaiOptions...)
 
