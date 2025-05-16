@@ -11,6 +11,7 @@ import (
 
 	"github.com/hekmon/liveprogress/v2"
 	"github.com/openai/openai-go"
+	"github.com/openai/openai-go/packages/param"
 )
 
 const (
@@ -21,6 +22,7 @@ Maintain the original formatting and line breaks without adding extra spaces or 
 <i>word</i>
 If multiple consecutive words are in italics, use the following format:
 non_italic_word_1 <i>italic_word_1 italic_word_2 ... italic_word_n</i> non_italic_word_2`
+	temperature = 0.1
 )
 
 func OCR(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
@@ -120,6 +122,9 @@ func ExtractText(ctx context.Context, client openai.Client, model string, img im
 			},
 		},
 		Model: model,
+		Temperature: param.Opt[float64]{
+			Value: temperature,
+		},
 	})
 	if err != nil {
 		err = fmt.Errorf("failed to get OCR chat completion: %w", err)
