@@ -99,43 +99,18 @@ type BatchLine struct {
 }
 
 func batchCreateLine(id int, model string, img image.Image, italic bool) (line string, err error) {
-	encodedImage, err := encodeImageToDataURL(img)
+	// Prepare request payload
+	body, err := generateOCRBodyRequest(img, model, italic)
 	if err != nil {
-		err = fmt.Errorf("failed to encode image: %w", err)
+		err = fmt.Errorf("failed to generate OCR body request: %w", err)
 		return
 	}
-	content := make([]openai.ChatCompletionContentPartUnionParam, 0, 2)
-	if italic {
-		content = append(content, openai.ChatCompletionContentPartUnionParam{
-			OfText: &openai.ChatCompletionContentPartTextParam{
-				Text: italicPrompt,
-			},
-		})
-	}
-	content = append(content, openai.ChatCompletionContentPartUnionParam{
-		OfImageURL: &openai.ChatCompletionContentPartImageParam{
-			ImageURL: openai.ChatCompletionContentPartImageImageURLParam{
-				URL: encodedImage,
-			},
-		},
-	})
+	// Create batch line
 	data, err := json.Marshal(BatchLine{
 		CustomID: strconv.Itoa(id),
 		Method:   "POST",
 		URL:      "/v1/chat/completions",
-		Body: openai.ChatCompletionNewParams{
-			Messages: []openai.ChatCompletionMessageParamUnion{
-				openai.SystemMessage(systemPrompt),
-				{
-					OfUser: &openai.ChatCompletionUserMessageParam{
-						Content: openai.ChatCompletionUserMessageParamContentUnion{
-							OfArrayOfContentParts: content,
-						},
-					},
-				},
-			},
-			Model: model,
-		},
+		Body:     body,
 	})
 	if err != nil {
 		err = fmt.Errorf("failed to marshal the batch request line")

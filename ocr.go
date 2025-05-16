@@ -88,13 +88,30 @@ func OCR(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model
 }
 
 func ExtractText(ctx context.Context, client openai.Client, model string, img image.Image, italic bool) (text string, promptTokens, completionTokens int64, err error) {
-	// Encode Image
-	encodedImage, err := encodeImageToDataURL(img)
+	// Prepare payload
+	body, err := generateOCRBodyRequest(img, model, italic)
 	if err != nil {
-		err = fmt.Errorf("failed to encode image to data URL: %w", err)
+		err = fmt.Errorf("failed to generate OCR body request: %w", err)
 		return
 	}
 	// Ask model for text extraction
+	chatCompletion, err := client.Chat.Completions.New(ctx, body)
+	if err != nil {
+		err = fmt.Errorf("failed to get OCR chat completion: %w", err)
+		return
+	}
+	text = chatCompletion.Choices[0].Message.Content
+	promptTokens = chatCompletion.Usage.PromptTokens
+	completionTokens = chatCompletion.Usage.CompletionTokens
+	return
+}
+
+func generateOCRBodyRequest(img image.Image, model string, italic bool) (body openai.ChatCompletionNewParams, err error) {
+	encodedImage, err := encodeImageToDataURL(img)
+	if err != nil {
+		err = fmt.Errorf("failed to encode image: %w", err)
+		return
+	}
 	content := make([]openai.ChatCompletionContentPartUnionParam, 0, 2)
 	if italic {
 		content = append(content, openai.ChatCompletionContentPartUnionParam{
@@ -110,7 +127,7 @@ func ExtractText(ctx context.Context, client openai.Client, model string, img im
 			},
 		},
 	})
-	chatCompletion, err := client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
+	body = openai.ChatCompletionNewParams{
 		Messages: []openai.ChatCompletionMessageParamUnion{
 			openai.SystemMessage(systemPrompt),
 			{
@@ -125,14 +142,7 @@ func ExtractText(ctx context.Context, client openai.Client, model string, img im
 		Temperature: param.Opt[float64]{
 			Value: temperature,
 		},
-	})
-	if err != nil {
-		err = fmt.Errorf("failed to get OCR chat completion: %w", err)
-		return
 	}
-	text = chatCompletion.Choices[0].Message.Content
-	promptTokens = chatCompletion.Usage.PromptTokens
-	completionTokens = chatCompletion.Usage.CompletionTokens
 	return
 }
 
