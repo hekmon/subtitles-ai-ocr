@@ -32,7 +32,7 @@ func main() {
 	baseURL := flag.String("baseurl", OAI_BASEURL, "OpenAI API base URL")
 	model := flag.String("model", "gpt-4.1-nano-2025-04-14", "AI model to use for OCR. Must be a Vision Language model.")
 	italic := flag.Bool("italic", false, "Instruct the model to detect italic text. So far no models managed to detect it properly.")
-	batchMode := flag.Bool("batch", false, "OpenAI batch mode. Longer, cheaper.")
+	batchMode := flag.Bool("batch", false, "OpenAI batch mode. Longer (up to 24h), cheaper (-50%).")
 	timeout := flag.Duration("timeout", 10*time.Minute, "Timeout for the OpenAI API requests")
 	debug := flag.Bool("debug", false, "Print each entry to stdout during the process")
 	version := flag.Bool("version", false, "show program version")
