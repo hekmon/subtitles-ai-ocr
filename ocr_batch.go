@@ -1,25 +1,49 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"image"
+	"io"
+	"net/http"
+	"os"
 	"strconv"
+	"time"
 
+	"github.com/hekmon/liveprogress/v2"
 	"github.com/openai/openai-go"
 )
 
 const (
 	batchMaxRequests = 50_000
 	batchMaxSize     = 200_000_000 // 200 MB
+	batchMaxWaitTime = openai.BatchNewParamsCompletionWindow24h
 )
+
+type batchContent []string
+
+func (bc batchContent) Reader() (r io.Reader, err error) {
+	var fileContent bytes.Buffer
+	for _, line := range bc {
+		if _, err = fileContent.WriteString(line); err != nil {
+			return
+		}
+		if _, err = fileContent.WriteRune('\n'); err != nil {
+			return
+		}
+	}
+	r = &fileContent
+	return
+}
 
 func OCRBatched(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
 	// Create the batches
 	var line string
-	batches := make([][]string, 0, len(imgSubs)/batchMaxRequests+1)
-	currentBatch := make([]string, 0, min(batchMaxRequests, len(imgSubs)))
+	batches := make([]batchContent, 0, len(imgSubs)/batchMaxRequests+1)
+	currentBatch := make(batchContent, 0, min(batchMaxRequests, len(imgSubs)))
 	for id, sub := range imgSubs {
 		if line, err = batchCreateLine(id, model, sub.Image, italic); err != nil {
 			err = fmt.Errorf("failed to create batch line #%d: %w", id, err)
@@ -31,7 +55,7 @@ func OCRBatched(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client
 					len(currentBatch), batchSize(currentBatch, ""))
 			}
 			batches = append(batches, currentBatch)
-			currentBatch = make([]string, 0, min(batchMaxRequests, len(imgSubs)-id))
+			currentBatch = make(batchContent, 0, min(batchMaxRequests, len(imgSubs)-id))
 		}
 		currentBatch = append(currentBatch, line)
 	}
@@ -49,7 +73,7 @@ func OCRBatched(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client
 				fmt.Printf("Failed to delete file %s (batch #%d) after processing: %v\n", f.ID, i, deleteErr)
 				continue
 			}
-			if res.Deleted != true {
+			if !res.Deleted {
 				fmt.Printf("File %s (batch #%d) was not deleted after processing\n", f.ID, i)
 				continue
 			}
@@ -58,19 +82,202 @@ func OCRBatched(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client
 			}
 		}
 	}()
-	var uploadedFile *openai.FileObject
+	var (
+		uploadedFile *openai.FileObject
+		reader       io.Reader
+	)
 	for i, batch := range batches {
-		// TODO marshall
+		if reader, err = batch.Reader(); err != nil {
+			err = fmt.Errorf("failed to create reader for batch #%d: %w", i, err)
+			return
+		}
 		if uploadedFile, err = client.Files.New(ctx, openai.FileNewParams{
-			File:    nil,
+			File:    reader,
 			Purpose: openai.FilePurposeBatch,
 		}); err != nil {
 			err = fmt.Errorf("failed to upload file for batch %d: %w", i, err)
 			return
 		}
 		uploadedFiles = append(uploadedFiles, uploadedFile)
+		if debug {
+			fmt.Printf("Successfully uploaded %q (batch #%d)\n", uploadedFile.ID, i)
+		}
 	}
-	fmt.Println(len(batches), "batches")
+	// Schedule the batches
+	maxWaitDuration, err := time.ParseDuration(string(batchMaxWaitTime))
+	if err != nil {
+		err = fmt.Errorf("failed to parse completion window duration: %w", err)
+		return
+	}
+	var res *openai.Batch
+	scheduledBatches := make([]*openai.Batch, 0, len(uploadedFiles))
+	for batchIndex, batchFile := range uploadedFiles {
+		if res, err = client.Batches.New(ctx, openai.BatchNewParams{
+			CompletionWindow: batchMaxWaitTime,
+			Endpoint:         openai.BatchNewParamsEndpointV1ChatCompletions,
+			InputFileID:      batchFile.ID,
+		}); err != nil {
+			err = fmt.Errorf("failed to schedule batch for file %s: %w", batchFile.ID, err)
+			return
+		}
+		scheduledBatches = append(scheduledBatches, res)
+		if debug {
+			fmt.Printf("Successfully scheduled %q for file %q (batch #%d)\n", res.ID, batchFile.ID, batchIndex)
+		}
+	}
+	start := time.Now()
+	maxEndTime := start.Add(maxWaitDuration)
+	// Prepare progress bar
+	var (
+		totalPromptTokens     int64
+		totalCompletionTokens int64
+	)
+	if err = liveprogress.Start(); err != nil {
+		err = fmt.Errorf("failed to start live progress: %w", err)
+		return
+	}
+	defer func() {
+		var clear bool
+		if err == nil {
+			clear = true
+		}
+		if err := liveprogress.Stop(clear); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to stop live progress: %s\n", err)
+		}
+		fmt.Printf("%s model tokens used: prompt=%d, completion=%d\n", model, totalPromptTokens, totalCompletionTokens)
+	}()
+	bar := liveprogress.SetMainLineAsCustomLine(func() string {
+		var nbOK int
+		for _, batch := range scheduledBatches {
+			if batch.Status == openai.BatchStatusCompleted {
+				nbOK++
+			}
+		}
+		var suffix string
+		if len(scheduledBatches) > 1 {
+			suffix = "es"
+		}
+		return fmt.Sprintf("%s | %d/%d batch%s completed | %s",
+			time.Since(start).Truncate(time.Second),
+			nbOK, len(scheduledBatches), suffix,
+			time.Since(maxEndTime).Truncate(time.Second)*-1,
+		)
+	})
+	defer liveprogress.RemoveCustomLine(bar)
+	bypass := liveprogress.Bypass()
+	// Wait
+	check := time.NewTicker(time.Minute)
+	defer check.Stop()
+	previousBatchesStatus := make([]openai.BatchStatus, len(scheduledBatches))
+	//// TODO batch cancel if error
+waitLoop:
+	for {
+		select {
+		case <-check.C:
+			for batchIndex, batch := range scheduledBatches {
+				if scheduledBatches[batchIndex], err = client.Batches.Get(ctx, batch.ID); err != nil {
+					err = fmt.Errorf("failed to get status of batch %s: %w", batch.ID, err)
+					return
+				}
+				if previousBatchesStatus[batchIndex] != scheduledBatches[batchIndex].Status {
+					if debug {
+						fmt.Fprintf(bypass, "Batch #%d (ID: %q) status changed from %q to %q\n",
+							batchIndex, batch.ID, previousBatchesStatus[batchIndex], batch.Status)
+					}
+					previousBatchesStatus[batchIndex] = scheduledBatches[batchIndex].Status
+					switch scheduledBatches[batchIndex].Status {
+					case openai.BatchStatusValidating:
+						// continue to wait
+						continue
+					case openai.BatchStatusFailed:
+						err = fmt.Errorf("batch %s failed: %s", batch.ID, batch.Errors.RawJSON())
+						return
+					case openai.BatchStatusInProgress:
+						// continue to wait
+						continue
+					case openai.BatchStatusFinalizing:
+						// continue to wait
+						continue
+					case openai.BatchStatusCompleted:
+						// continue to the next check
+					case openai.BatchStatusExpired:
+						err = fmt.Errorf("batch %s expired", batch.ID)
+						return
+					case openai.BatchStatusCancelling:
+						// continue to wait
+						continue
+					case openai.BatchStatusCancelled:
+						err = fmt.Errorf("batch %s cancelled", batch.ID)
+						return
+					default:
+						fmt.Fprintf(bypass, "Unknown batch status for batch %s: %s\n", batch.ID, batch.Status)
+						continue
+					}
+					allDone := true
+					for _, batch := range scheduledBatches {
+						if batch.Status != openai.BatchStatusCompleted {
+							allDone = false
+							break
+						}
+					}
+					if allDone {
+						break waitLoop
+					}
+				}
+			}
+		case <-ctx.Done():
+			err = ctx.Err()
+			return
+		}
+	}
+	fmt.Fprintf(bypass, "All batches completed in %s.\n", time.Since(start))
+	// Get the results
+	//// TODO defer delete results file
+	txtSubs = make(SRTSubtitles, len(imgSubs))
+	var (
+		results  *http.Response
+		subIndex int
+	)
+	for batchIndex, batch := range scheduledBatches {
+		// Get content
+		if results, err = client.Files.Content(ctx, batch.OutputFileID); err != nil {
+			err = fmt.Errorf("Failed to get batch #%d result file (ID %s): %w",
+				batchIndex, batch.OutputFileID, err,
+			)
+			return
+		}
+		// Scan line by line
+		scanner := bufio.NewScanner(results.Body)
+		for scanner.Scan() {
+			var line BatchLineResponse
+			if err = json.Unmarshal([]byte(scanner.Text()), &line); err != nil {
+				err = fmt.Errorf("Failed to unmarshal batch #%d result line: %w", batchIndex, err)
+				return
+			}
+			// Process the line
+			if subIndex, err = strconv.Atoi(line.CustomID); err != nil {
+				err = fmt.Errorf("Failed to convert custom ID to integer: %w", err)
+				return
+			}
+			txtSubs[subIndex] = SRTSubtitle{
+				Start: SRTTimestamp(imgSubs[subIndex].StartTime),
+				End:   SRTTimestamp(imgSubs[subIndex].EndTime),
+				Text:  line.Response.Body.Choices[0].Message.Content,
+			}
+			totalPromptTokens = line.Response.Body.Usage.PromptTokens
+			totalCompletionTokens = line.Response.Body.Usage.CompletionTokens
+			if debug {
+				fmt.Fprintf(bypass, "#%d %s --> %s (batch #%d)\n%s\n\n",
+					subIndex+1, imgSubs[subIndex].StartTime, imgSubs[subIndex].EndTime, batchIndex,
+					line.Response.Body.Choices[0].Message.Content,
+				)
+			}
+		}
+		if err = scanner.Err(); err != nil {
+			err = fmt.Errorf("Failed to scan batch #%d result file: %w", batchIndex, err)
+			return
+		}
+	}
 	return
 }
 
@@ -91,7 +298,7 @@ func batchSize(currentBatch []string, newLine string) (totalSize int) {
 	return
 }
 
-type BatchLine struct {
+type batchLine struct {
 	CustomID string                         `json:"custom_id"`
 	Method   string                         `json:"method"`
 	URL      string                         `json:"url"`
@@ -106,10 +313,10 @@ func batchCreateLine(id int, model string, img image.Image, italic bool) (line s
 		return
 	}
 	// Create batch line
-	data, err := json.Marshal(BatchLine{
+	data, err := json.Marshal(batchLine{
 		CustomID: strconv.Itoa(id),
 		Method:   "POST",
-		URL:      "/v1/chat/completions",
+		URL:      string(openai.BatchNewParamsEndpointV1ChatCompletions),
 		Body:     body,
 	})
 	if err != nil {
@@ -118,4 +325,15 @@ func batchCreateLine(id int, model string, img image.Image, italic bool) (line s
 	}
 	line = string(data)
 	return
+}
+
+type BatchLineResponse struct {
+	ID       string `json:"id"`
+	CustomID string `json:"custom_id"`
+	Response struct {
+		StatusCode int                   `json:"status_code"`
+		RequestID  string                `json:"request_id"`
+		Body       openai.ChatCompletion `json:"body"`
+	} `json:"response"`
+	Error interface{} `json:"error"`
 }
