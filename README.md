@@ -49,6 +49,8 @@ set OPENAI_API_KEY=your_openai_api_key_here
 
 ### Advanced (self-hosted)
 
+TODO `-baseurl http://localhost:11434/v1 -model qwen2.5vl:7b-fp16 -timeout 30s`
+
 For local inference [Qwen2.5-VL 7B](https://huggingface.co/Qwen/Qwen2.5-VL-7B-Instruct) is recommended for best results (even if it can not handle properly italic text).
 
 #### Linux/MacOS
