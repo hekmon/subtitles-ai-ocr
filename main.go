@@ -98,6 +98,9 @@ func main() {
 		}
 	}
 	fmt.Println("PGS file parsed. Total subs:", len(imgSubs))
+	if len(imgSubs) == 0 {
+		return
+	}
 
 	// Prepare clean stop
 	runCtx, runCtxStopFunc := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
