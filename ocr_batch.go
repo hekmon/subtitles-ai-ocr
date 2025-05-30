@@ -179,50 +179,51 @@ waitLoop:
 					err = fmt.Errorf("failed to get status of batch %s: %w", batch.ID, err)
 					return
 				}
-				if previousBatchesStatus[batchIndex] != scheduledBatches[batchIndex].Status {
-					if debug {
-						fmt.Fprintf(bypass, "Batch #%d (ID: %q) status changed from %q to %q\n",
-							batchIndex, batch.ID, previousBatchesStatus[batchIndex], batch.Status)
+				if previousBatchesStatus[batchIndex] == scheduledBatches[batchIndex].Status {
+					continue
+				}
+				if debug {
+					fmt.Fprintf(bypass, "Batch #%d (ID: %q) status changed from %q to %q\n",
+						batchIndex, batch.ID, previousBatchesStatus[batchIndex], batch.Status)
+				}
+				previousBatchesStatus[batchIndex] = scheduledBatches[batchIndex].Status
+				switch scheduledBatches[batchIndex].Status {
+				case openai.BatchStatusValidating:
+					// continue to wait
+					continue
+				case openai.BatchStatusFailed:
+					err = fmt.Errorf("batch %s failed: %s", batch.ID, batch.Errors.RawJSON())
+					return
+				case openai.BatchStatusInProgress:
+					// continue to wait
+					continue
+				case openai.BatchStatusFinalizing:
+					// continue to wait
+					continue
+				case openai.BatchStatusCompleted:
+					// continue to the next check
+				case openai.BatchStatusExpired:
+					err = fmt.Errorf("batch %s expired", batch.ID)
+					return
+				case openai.BatchStatusCancelling:
+					// continue to wait
+					continue
+				case openai.BatchStatusCancelled:
+					err = fmt.Errorf("batch %s cancelled", batch.ID)
+					return
+				default:
+					fmt.Fprintf(bypass, "Unknown batch status for batch %s: %s\n", batch.ID, batch.Status)
+					continue
+				}
+				allDone := true
+				for _, batch := range scheduledBatches {
+					if batch.Status != openai.BatchStatusCompleted {
+						allDone = false
+						break
 					}
-					previousBatchesStatus[batchIndex] = scheduledBatches[batchIndex].Status
-					switch scheduledBatches[batchIndex].Status {
-					case openai.BatchStatusValidating:
-						// continue to wait
-						continue
-					case openai.BatchStatusFailed:
-						err = fmt.Errorf("batch %s failed: %s", batch.ID, batch.Errors.RawJSON())
-						return
-					case openai.BatchStatusInProgress:
-						// continue to wait
-						continue
-					case openai.BatchStatusFinalizing:
-						// continue to wait
-						continue
-					case openai.BatchStatusCompleted:
-						// continue to the next check
-					case openai.BatchStatusExpired:
-						err = fmt.Errorf("batch %s expired", batch.ID)
-						return
-					case openai.BatchStatusCancelling:
-						// continue to wait
-						continue
-					case openai.BatchStatusCancelled:
-						err = fmt.Errorf("batch %s cancelled", batch.ID)
-						return
-					default:
-						fmt.Fprintf(bypass, "Unknown batch status for batch %s: %s\n", batch.ID, batch.Status)
-						continue
-					}
-					allDone := true
-					for _, batch := range scheduledBatches {
-						if batch.Status != openai.BatchStatusCompleted {
-							allDone = false
-							break
-						}
-					}
-					if allDone {
-						break waitLoop
-					}
+				}
+				if allDone {
+					break waitLoop
 				}
 			}
 		case <-ctx.Done():
