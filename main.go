@@ -20,7 +20,7 @@ import (
 const (
 	APIKEY_ENV = "OPENAI_API_KEY" // default from openai client
 
-	//  overrided during compilation
+	// overrided during compilation
 	Version = "dev"
 )
 
