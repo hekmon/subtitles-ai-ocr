@@ -169,7 +169,27 @@ func OCRBatched(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client
 	check := time.NewTicker(time.Minute)
 	defer check.Stop()
 	previousBatchesStatus := make([]openai.BatchStatus, len(scheduledBatches))
-	//// TODO batch cancel if error
+	defer func() {
+		// Cancel running batch if we are exiting early
+		if err == nil {
+			// if we are exiting normally, nothing to do
+			return
+		}
+		for batchIndex, batch := range scheduledBatches {
+			switch batch.Status {
+			case openai.BatchStatusFailed, openai.BatchStatusCompleted, openai.BatchStatusCancelling, openai.BatchStatusCancelled:
+				continue // no need to cancel non running batches
+			default:
+				if res, err := client.Batches.Cancel(context.TODO(), batch.ID); err != nil {
+					fmt.Fprintf(bypass, "Batch #%d (ID: %q) cancelling failed: %s\n",
+						batchIndex, batch.ID, err.Error())
+				} else {
+					fmt.Fprintf(bypass, "Batch #%d (ID: %q) cancelling new status: %s\n",
+						batchIndex, batch.ID, res.Status)
+				}
+			}
+		}
+	}()
 waitLoop:
 	for {
 		select {
@@ -233,7 +253,19 @@ waitLoop:
 	}
 	fmt.Fprintf(bypass, "All batches completed in %s.\n", time.Since(start))
 	// Get the results
-	//// TODO defer delete results file
+	defer func() {
+		// defer delete results file
+		for batchIndex, batch := range scheduledBatches {
+			// Get content
+			if res, err := client.Files.Delete(context.TODO(), batch.OutputFileID); err != nil {
+				fmt.Fprintf(bypass, "Batch #%d (ID: %q) results file ID %q deletion failed: %s\n",
+					batchIndex, batch.ID, batch.OutputFileID, err.Error())
+			} else {
+				fmt.Fprintf(bypass, "Batch #%d (ID: %q) results file ID %q deletion: %s\n",
+					batchIndex, batch.ID, batch.OutputFileID, res.Deleted)
+			}
+		}
+	}()
 	txtSubs = make(SRTSubtitles, len(imgSubs))
 	var (
 		results  *http.Response
