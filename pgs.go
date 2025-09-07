@@ -2,18 +2,11 @@ package main
 
 import (
 	"fmt"
-	"image"
 	"time"
 
 	"github.com/mbiamont/go-pgs-parser/displaySet"
 	"github.com/mbiamont/go-pgs-parser/pgs"
 )
-
-type ImageSubtitle struct {
-	Image     image.Image
-	StartTime time.Duration
-	EndTime   time.Duration
-}
 
 func ParsePGSFile(filePath string) (subs []ImageSubtitle, err error) {
 	var currentSub *ImageSubtitle

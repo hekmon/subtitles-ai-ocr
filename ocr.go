@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"time"
 
 	"github.com/hekmon/liveprogress/v2"
 	"github.com/openai/openai-go"
@@ -17,13 +18,27 @@ import (
 const (
 	systemPrompt = `Extract the text from the user's input.
 Do not use quotes, do not provide comments, and do not add any additional content beyond the extracted text from the image.
-Maintain the original formatting and line breaks without adding extra spaces or line breaks.`
+Maintain the original formatting and line breaks without adding extra spaces or line breaks.
+Do not reformulate, write the text exactly as it is on the image even if it is an incomplete sentence. Respect the line breaks.`
+
 	italicPrompt = `When formatting text, if a single word is in italics, use the following format to mark it:
 <i>word</i>
+
 If multiple consecutive words are in italics, use the following format:
-non_italic_word_1 <i>italic_word_1 italic_word_2 ... italic_word_n</i> non_italic_word_2`
+non_italic_word_1 <i>italic_word_1 italic_word_2 ... italic_word_n</i> non_italic_word_2
+
+If the italic words span on multiples lines, use the following format:
+non_italic_word_1 <i>italic_word_1
+italic_word_2 ... italic_word_n</i> non_italic_word_2`
+
 	temperature = 0.1
 )
+
+type ImageSubtitle struct {
+	Image     image.Image
+	StartTime time.Duration
+	EndTime   time.Duration
+}
 
 func OCR(ctx context.Context, imgSubs []ImageSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
 	// Progress bar
@@ -114,6 +129,7 @@ func generateOCRBodyRequest(img image.Image, model string, italic bool) (body op
 	}
 	content := make([]openai.ChatCompletionContentPartUnionParam, 0, 2)
 	if italic {
+		// Set the additionnal italic instructions as user prompt
 		content = append(content, openai.ChatCompletionContentPartUnionParam{
 			OfText: &openai.ChatCompletionContentPartTextParam{
 				Text: italicPrompt,
