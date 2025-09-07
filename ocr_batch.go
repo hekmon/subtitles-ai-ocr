@@ -39,7 +39,7 @@ func (bc batchContent) Reader() (r io.Reader, err error) {
 	return
 }
 
-func OCRBatched(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
+func OCRBatched(ctx context.Context, imgSubs []ImageSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
 	// Create the batches
 	var line string
 	batches := make([]batchContent, 0, len(imgSubs)/batchMaxRequests+1)

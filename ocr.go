@@ -25,7 +25,7 @@ non_italic_word_1 <i>italic_word_1 italic_word_2 ... italic_word_n</i> non_itali
 	temperature = 0.1
 )
 
-func OCR(ctx context.Context, imgSubs []PGSSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
+func OCR(ctx context.Context, imgSubs []ImageSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
 	// Progress bar
 	var (
 		totalPromptTokens     int64
