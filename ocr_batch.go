@@ -261,7 +261,7 @@ waitLoop:
 				fmt.Fprintf(bypass, "Batch #%d (ID: %q) results file ID %q deletion failed: %s\n",
 					batchIndex, batch.ID, batch.OutputFileID, err.Error())
 			} else {
-				fmt.Fprintf(bypass, "Batch #%d (ID: %q) results file ID %q deletion: %s\n",
+				fmt.Fprintf(bypass, "Batch #%d (ID: %q) results file ID %q deletion: %v\n",
 					batchIndex, batch.ID, batch.OutputFileID, res.Deleted)
 			}
 		}
