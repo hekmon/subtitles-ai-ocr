@@ -18,8 +18,9 @@ import (
 const (
 	systemPrompt = `Extract the text from the user's input.
 Do not use quotes, do not provide comments, and do not add any additional content beyond the extracted text from the image.
+Do not reformulate, write the text exactly as it is on the image even if it is an incomplete sentence. Respect the line breaks.
 Maintain the original formatting and line breaks without adding extra spaces or line breaks.
-Do not reformulate, write the text exactly as it is on the image even if it is an incomplete sentence. Respect the line breaks.`
+If the user input do not contains any text, simply extract the text from the image. Otherwise consider user instruction as additionnal rules to follow.`
 
 	italicPrompt = `When formatting text, if a single word is in italics, use the following format to mark it:
 <i>word</i>

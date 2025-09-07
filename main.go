@@ -47,12 +47,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Please set the -input flag\n\n")
 		flag.Usage()
 		return
-	} else if !strings.HasSuffix(*inputPath, ".sup") {
-		fmt.Fprintf(os.Stderr, "The input file must be a .sup file\n")
+	} else if !strings.HasSuffix(*inputPath, ".sup") && !strings.HasSuffix(*inputPath, ".sub") {
+		fmt.Fprintf(os.Stderr, "The input file must be a .sup (Bluray PGS) or .sub (DVD VobSub) file\n")
 		return
 	}
 	if *outputPath == "" {
-		*outputPath = filepath.Join(filepath.Dir(*inputPath), strings.TrimSuffix(filepath.Base(*inputPath), ".sup")+".srt")
+		*outputPath = filepath.Join(filepath.Dir(*inputPath), strings.TrimSuffix(filepath.Base(*inputPath), filepath.Ext(*inputPath))+".srt")
 	} else if !strings.HasSuffix(*outputPath, ".srt") {
 		fmt.Fprintf(os.Stderr, "The output file must be a .srt file\n")
 		return
@@ -76,30 +76,60 @@ func main() {
 		option.WithBaseURL(*baseURL),
 	)
 
-	// Check if we can create the output file now to avoid loosing the extraction if we can not save it afterwards
-	var fd *os.File
-	if fd, err = os.Create(*outputPath); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to write the output test file: %s\n", err)
-		return
-	}
-	defer fd.Close()
-
-	// Step 1 - Parse PGS file
-	fmt.Printf("Parsing PGS file %q\n", filepath.Base(*inputPath))
-	imgSubs, err := ParsePGSFile(*inputPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to parse PGS file: %s\n", err)
-		return
-	}
-	if *debug {
-		for _, sub := range imgSubs {
-			fmt.Printf("Start: %v, End: %v, Size: %d×%v\n",
-				sub.StartTime, sub.EndTime, sub.Image.Bounds().Dx(), sub.Image.Bounds().Dy())
+	// Step 1 - Parse subtitle file
+	var subs map[int][]ImageSubtitle
+	if strings.HasSuffix(*inputPath, ".sup") {
+		fmt.Printf("Parsing PGS file %q\n", filepath.Base(*inputPath))
+		imgSubs, err := ParsePGSFile(*inputPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to parse PGS file: %s\n", err)
+			return
 		}
-	}
-	fmt.Println("PGS file parsed. Total subs:", len(imgSubs))
-	if len(imgSubs) == 0 {
-		return
+		if *debug {
+			for _, sub := range imgSubs {
+				fmt.Printf("Start: %v, End: %v, Size: %d×%v\n",
+					sub.StartTime, sub.EndTime, sub.Image.Bounds().Dx(), sub.Image.Bounds().Dy(),
+				)
+			}
+		}
+		fmt.Println("PGS file parsed. Total subs:", len(imgSubs))
+		if len(imgSubs) == 0 {
+			return
+		}
+		subs = map[int][]ImageSubtitle{
+			0: imgSubs,
+		}
+	} else {
+		fmt.Printf("Parsing VobSub file %q\n", filepath.Base(*inputPath))
+		if subs, err = ParseVobSubFile(*inputPath); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to parse PGS file: %s\n", err)
+			return
+		}
+		var (
+			subIndex  string
+			totalSubs int
+		)
+		for index, imgSubs := range subs {
+			if len(subs) > 1 {
+				subIndex = fmt.Sprintf("[%d] ", index)
+			}
+			totalSubs += len(imgSubs)
+			if *debug {
+				for _, sub := range imgSubs {
+					fmt.Printf("%sStart: %v, End: %v, Size: %d×%v\n",
+						subIndex, sub.StartTime, sub.EndTime,
+						sub.Image.Bounds().Dx(), sub.Image.Bounds().Dy(),
+					)
+				}
+			}
+		}
+		if len(subs) > 1 {
+			subIndex = fmt.Sprintf(" (over %d streams)", len(subs))
+		}
+		fmt.Printf("VobSub file parsed. Total subs: %d%s\n", totalSubs, subIndex)
+		if totalSubs == 0 {
+			return
+		}
 	}
 
 	// Prepare clean stop
@@ -107,26 +137,60 @@ func main() {
 	defer runCtxStopFunc()
 
 	// Step 2 - OCR with AI
+	for streamID, streamSubs := range subs {
+		var finalOutputPath string
+		// Adjust outputpath if needed
+		if len(subs) > 1 {
+			dirPath := filepath.Dir(*outputPath)
+			file := filepath.Base(*outputPath)
+			extension := filepath.Ext(file)
+			fileName := file[:len(file)-len(extension)]
+			finalOutputPath = filepath.Join(dirPath, fmt.Sprintf("%s_stream-%d%s", fileName, streamID, extension))
+			fmt.Printf("Stream #%d\n", streamID)
+		} else {
+			finalOutputPath = *outputPath
+		}
+		// Start process
+		if err = processSubsImages(runCtx, streamSubs, oaiClient, *model, finalOutputPath, *batchMode, *italic, *debug); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to write the output test file: %s\n", err)
+			return
+		}
+		if finalOutputPath != *outputPath {
+			fmt.Println()
+		}
+	}
+}
+
+func processSubsImages(ctx context.Context, imgSubs []ImageSubtitle, oaiClient openai.Client, model, outputPath string,
+	batch, italic, debug bool) (err error) {
+	// Check if we can create the output file now to avoid loosing the extraction if we can not save it afterwards
+	var fd *os.File
+	if fd, err = os.Create(outputPath); err != nil {
+		err = fmt.Errorf("Failed to write the output test file: %w", err)
+		return
+	}
+	defer fd.Close()
+	// Prepare OCR via AI
 	liveprogress.RefreshInterval = 500 * time.Millisecond
 	var srtSubs SRTSubtitles
 	start := time.Now()
-	if *batchMode {
-		if srtSubs, err = OCRBatched(runCtx, imgSubs, oaiClient, *model, *italic, *debug); err != nil {
-			fmt.Fprintf(os.Stderr, "batched OCR failed: %s\n", err)
+	if batch {
+		if srtSubs, err = OCRBatched(ctx, imgSubs, oaiClient, model, italic, debug); err != nil {
+			err = fmt.Errorf("batched OCR failed: %w", err)
 			return
 		}
 	} else {
-		if srtSubs, err = OCR(runCtx, imgSubs, oaiClient, *model, *italic, *debug); err != nil {
-			fmt.Fprintf(os.Stderr, "OCR failed: %s\n", err)
+		if srtSubs, err = OCR(ctx, imgSubs, oaiClient, model, italic, debug); err != nil {
+			err = fmt.Errorf("OCR failed: %w", err)
 			return
 		}
 	}
 	fmt.Printf("OCR completed in %v\n", time.Since(start))
-
 	// Step 3 - Write SRT file
 	if err = srtSubs.Marshal(fd); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to write SRT: %s\n", err)
+		err = fmt.Errorf("failed to write SRT: %s\n", err)
 		return
 	}
-	fmt.Printf("SRT written to %q\n", *outputPath)
+	fmt.Printf("SRT written to %q\n", outputPath)
+	return
 }
