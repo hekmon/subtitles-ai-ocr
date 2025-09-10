@@ -7,7 +7,7 @@ import (
 )
 
 func ParseVobSubFile(filePath string) (subs map[int][]ImageSubtitle, err error) {
-	dvdSubtitles, _, err := vobsub.Decode(filePath, false)
+	dvdSubtitles, _, err := vobsub.Decode(filePath, true) // some images are too small for Qwen2.5-VL, using video stream resolution instead
 	if err != nil {
 		err = fmt.Errorf("failed to decode vobsub file: %w", err)
 		return
