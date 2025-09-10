@@ -1,6 +1,6 @@
 # Subtitles AI OCR
 
-Decode Bluray PGS or DVD VobSub subtitles and extract their embedded text using an external (with OpenAI API) Vision Language Model to create an output SRT file.
+Decode Bluray PGS or DVD VobSub subtitles and extract their embedded text using a Vision Language Model (OpenAI API compatible) to create an output SRT file.
 
 ## Usage
 
