@@ -1,6 +1,6 @@
-# PGS AI OCR
+# Subtitles AI OCR
 
-Extract PGS subtitles and recover text using an external (with OpenAI API) Vision Language model to create an output SRT file.
+Decode Bluray PGS or DVD VobSub subtitles and extract their embedded text using an external (with OpenAI API) Vision Language Model to create an output SRT file.
 
 ## Usage
 
@@ -14,7 +14,7 @@ Usage of ./subtitles-ai-ocr:
   -baseurl string
         OpenAI API base URL (default "https://api.openai.com/v1")
   -batch
-        OpenAI batch mode. Longer (up to 24h) but cheaper (-50%). You should validate a few samples in regular mode first.
+        OpenAI batch mode. Longer (up to 24h) but cheaper (-50%). The progress bar won't help you much: it will be ready when it will be ready! You should validate a few samples in regular mode first.
   -debug
         Print each entry to stdout during the process
   -input string
@@ -38,7 +38,7 @@ Usage of ./subtitles-ai-ocr:
 ```bash
 export OPENAI_API_KEY="your_openai_api_key_here"
 # you can validate with the following cmd: echo $OPENAI_API_KEY
-./subtitles-ai-ocr -input /path/to/input/pgs/subtitle/file.sup -output /path/to/output/subtitle/file.srt -debug
+./subtitles-ai-ocr -input /path/to/input/pgs/subtitle/file.sup -debug
 ```
 
 #### Windows
@@ -48,26 +48,52 @@ Using the command line (`cmd.exe`):
 ```bat
 set OPENAI_API_KEY=your_openai_api_key_here
 :: you can validate with the following cmd: echo %OPENAI_API_KEY%
-.\subtitles-ai-ocr.exe -italic -input C:\path\to\input\pgs\subtitle\file.sup -output C:\path\to\output\subtitle\file.srt -debug
+.\subtitles-ai-ocr.exe -input C:\path\to\input\pgs\subtitle\file.sup -debug
+```
+
+### Advanced (OpenAI batch mode)
+
+You will loose the progress bar usefullness and the streaming debug but it will cost you half the regular price.
+You should validate a few lines without batch mode and with the `-debug` flag first and then process the entire file with batch mode to cut cost.
+This example also added the `-output` flag for custom output file path but it's optional.
+
+#### Linux/MacOS
+
+```bash
+export OPENAI_API_KEY="your_openai_api_key_here"
+# you can validate with the following cmd: echo $OPENAI_API_KEY
+./subtitles-ai-ocr -input /path/to/input/pgs/subtitle/file.sup -output /path/to/output/subtitle/file.srt -batch
+```
+
+#### Windows
+
+Using the command line (`cmd.exe`):
+
+```bat
+set OPENAI_API_KEY=your_openai_api_key_here
+:: you can validate with the following cmd: echo %OPENAI_API_KEY%
+.\subtitles-ai-ocr.exe -input C:\path\to\input\pgs\subtitle\file.sup -output C:\path\to\output\subtitle\file.srt -batch
 ```
 
 ### Advanced (self-hosted)
 
+This example will use Ollama but you can use any self hosted inference server as long as it has an OpenAI API compatible endpoint.
+
 #### Pre-requisites
 
 * Install [Ollama](https://ollama.com/).
-* Select the variant that fits on your available VRAM of the [unsloth optimized Qwen2.5-VL 32B model](https://huggingface.co/unsloth/Qwen2.5-VL-32B-Instruct-GGUF).
-* For example, with 32GiB of VRAM, I am using the `UD-Q5_K_XL` variant.
-* If you are VRAM limited you can also check the [7B version of the model](https://huggingface.co/unsloth/Qwen2.5-VL-7B-Instruct-GGUF).
+* Select the variant that fits on your available VRAM of the [Qwen2.5-VL model](https://ollama.com/library/qwen2.5vl).
+* For example, with 32GiB of VRAM, I am using the [32B variant](https://ollama.com/library/qwen2.5vl:32b) (28GiB usage for 4k context, 31,5GiB with 32k context).
+* If you are VRAM limited you can also check the [7B variant](https://ollama.com/library/qwen2.5vl:7b).
 
 #### Linux/MacOS
 
 ```bash
 # Validate the model and the runtime VRAM needs fits into your available VRAM
 # If you are sure it will fits, simply use `pull` instead of `run`
-ollama run hf.co/unsloth/Qwen2.5-VL-32B-Instruct-GGUF:UD-Q5_K_XL
+ollama run qwen2.5vl:32b
 # Run the OCR with the validated model
-./subtitles-ai-ocr -baseurl http://127.0.0.1:11434/v1 -timeout 30s -model "hf.co/unsloth/Qwen2.5-VL-32B-Instruct-GGUF:UD-Q5_K_XL" -input /path/to/input/pgs/subtitle/file.sup -output /path/to/output/subtitle/file.srt -debug
+./subtitles-ai-ocr -baseurl http://127.0.0.1:11434/v1 -timeout 30s -model "qwen2.5vl:32b" -input /path/to/input/pgs/subtitle/file.sup -output /path/to/output/subtitle/file.srt -debug
 ```
 
 #### Windows
@@ -77,10 +103,14 @@ Using the command line (`cmd.exe`):
 ```bat
 :: Validate the model and the runtime VRAM needs fits into your available VRAM
 :: If you are sure it will fits, simply use `pull` instead of `run`
-ollama run hf.co/unsloth/Qwen2.5-VL-32B-Instruct-GGUF:UD-Q5_K_XL
+ollama run qwen2.5vl:32b
 :: Run the OCR with the validated model
-.\subtitles-ai-ocr.exe -baseurl http://127.0.0.1:11434/v1 -timeout 30s -model "hf.co/unsloth/Qwen2.5-VL-32B-Instruct-GGUF:UD-Q5_K_XL" -input C:\path\to\input\pgs\subtitle\file.sup -output C:\path\to\output\subtitle\file.srt -debug
+.\subtitles-ai-ocr.exe -baseurl http://127.0.0.1:11434/v1 -timeout 30s -model "qwen2.5vl:32b" -input C:\path\to\input\pgs\subtitle\file.sup -output C:\path\to\output\subtitle\file.srt -debug
 ```
+
+## Going further
+
+Checkout [subtitles-ai-translator](https://github.com/hekmon/subtitles-ai-translator)!
 
 ## Thanks
 
