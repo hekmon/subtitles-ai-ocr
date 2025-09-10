@@ -6,12 +6,12 @@ version=$(git describe --tags --always --dirty)
 
 crosscompile () {
     if [ "$1" == "windows" ]; then
-        name='pgs-ai-ocr.exe'
+        name='subtitles-ai-ocr.exe'
     else
-        name='pgs-ai-ocr'
+        name='subtitles-ai-ocr'
     fi
     GOOS="$1" GOARCH="$2" go build -ldflags="-s -w -X 'main.Version=${version}'" -o "$name"
-    zip -9 "pgs-ai-ocr_${version}_${1}_${2}.zip" "$name"
+    zip -9 "subtitles-ai-ocr_${version}_${1}_${2}.zip" "$name"
 }
 
 echo '* Compiling for Windows'
@@ -27,5 +27,5 @@ echo '* Compiling for Linux'
 crosscompile 'linux' 'amd64'
 echo
 echo '* Cleaning up'
-test -f pgs-ai-ocr && rm pgs-ai-ocr
-test -f pgs-ai-ocr.exe && rm pgs-ai-ocr.exe
+test -f subtitles-ai-ocr && rm subtitles-ai-ocr
+test -f subtitles-ai-ocr.exe && rm subtitles-ai-ocr.exe

@@ -27,10 +27,10 @@ const (
 
 func main() {
 	// Define flags
-	inputPath := flag.String("input", "", "PGS file to parse (.sup)")
-	outputPath := flag.String("output", "", "Output subtitle to create (.srt subtitle). Default will use same folder and same filename with .srt extension")
+	inputPath := flag.String("input", "", "Image subtitles file to decode (.sup for Bluray PGS and .sub -.idx must also be present- for DVD VobSub)")
+	outputPath := flag.String("output", "", "Output subtitle to create (.srt subtitle). Default will use same folder and same filename as input but with .srt extension")
 	baseURL := flag.String("baseurl", OAI_BASEURL, "OpenAI API base URL")
-	model := flag.String("model", "gpt-4.1-nano-2025-04-14", "AI model to use for OCR. Must be a Vision Language model.")
+	model := flag.String("model", "gpt-5-nano-2025-08-07", "AI model to use for OCR. Must be a Vision Language Model.")
 	italic := flag.Bool("italic", false, "Instruct the model to detect italic text. So far no models managed to detect it properly.")
 	batchMode := flag.Bool("batch", false, "OpenAI batch mode. Longer (up to 24h) but cheaper (-50%). You should validate a few samples in regular mode first.")
 	timeout := flag.Duration("timeout", 10*time.Minute, "Timeout for the OpenAI API requests")

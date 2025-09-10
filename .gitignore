@@ -25,6 +25,6 @@ go.work.sum
 .env
 
 # Dev
-/pgs-ai-ocr
-/pgs-ai-ocr.exe
-/pgs-ai-ocr_*.zip
+/subtitles-ai-ocr
+/subtitles-ai-ocr.exe
+/subtitles-ai-ocr_*.zip

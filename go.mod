@@ -1,4 +1,4 @@
-module github.com/hekmon/pgs-ai-ocr
+module github.com/hekmon/subtitles-ai-ocr
 
 go 1.24.2
 
