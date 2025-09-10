@@ -83,7 +83,11 @@ This example will use Ollama but you can use any self hosted inference server as
 
 * Install [Ollama](https://ollama.com/).
 * Select the variant that fits on your available VRAM of the [Qwen2.5-VL model](https://ollama.com/library/qwen2.5vl).
-* For example, with 32GiB of VRAM, I am using the [32B variant](https://ollama.com/library/qwen2.5vl:32b) (28GiB usage for 4k context, 31,5GiB with 32k context).
+* For example, with 32GiB of VRAM, I am using the [32B variant](https://ollama.com/library/qwen2.5vl:32b)
+    * Model + 4k context consumes ~25,3GiB
+    * Model + 8k context consumes ~26,5GiB
+    * Model + 16k context consumes ~29,8GiB
+    * Model + 32k context consumes ~31,5GiB of VRAM but actually yields degraded performances as there is some layers offloaded to RAM (overflow)
 * If you are VRAM limited you can also check the [7B variant](https://ollama.com/library/qwen2.5vl:7b).
 
 #### Linux/MacOS
