@@ -12,7 +12,6 @@ import (
 
 	"github.com/hekmon/liveprogress/v2"
 	"github.com/openai/openai-go"
-	"github.com/openai/openai-go/packages/param"
 )
 
 const (
@@ -156,9 +155,9 @@ func generateOCRBodyRequest(img image.Image, model string, italic bool) (body op
 			},
 		},
 		Model: model,
-		Temperature: param.Opt[float64]{
-			Value: temperature,
-		},
+		// Temperature: param.Opt[float64]{
+		// 	Value: temperature,
+		// },
 	}
 	return
 }
