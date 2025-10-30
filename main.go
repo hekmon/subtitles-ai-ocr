@@ -32,6 +32,7 @@ func main() {
 	baseURL := flag.String("baseurl", OAI_BASEURL, "OpenAI API base URL")
 	model := flag.String("model", "gpt-5-nano-2025-08-07", "AI model to use for OCR. Must be a Vision Language Model.")
 	italic := flag.Bool("italic", false, "Instruct the model to detect italic text. So far no models managed to detect it properly.")
+	nbWorkers := flag.Int("workers", 1, "Number of parallel workers. Does nothing with batch mode.")
 	batchMode := flag.Bool("batch", false, "OpenAI batch mode. Longer (up to 24h) but cheaper (-50%). The progress bar won't help you much: it will be ready when it will be ready! You should validate a few samples in regular mode first.")
 	timeout := flag.Duration("timeout", 10*time.Minute, "Timeout for the OpenAI API requests")
 	debug := flag.Bool("debug", false, "Print each entry to stdout during the process")
@@ -151,7 +152,7 @@ func main() {
 			finalOutputPath = *outputPath
 		}
 		// Start process
-		if err = processSubsImages(runCtx, streamSubs, oaiClient, *model, finalOutputPath, *batchMode, *italic, *debug); err != nil {
+		if err = processSubsImages(runCtx, streamSubs, *nbWorkers, oaiClient, *model, finalOutputPath, *batchMode, *italic, *debug); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to write the output test file: %s\n", err)
 			return
 		}
@@ -161,7 +162,7 @@ func main() {
 	}
 }
 
-func processSubsImages(ctx context.Context, imgSubs []ImageSubtitle, oaiClient openai.Client, model, outputPath string,
+func processSubsImages(ctx context.Context, imgSubs []ImageSubtitle, nbWorkers int, oaiClient openai.Client, model, outputPath string,
 	batch, italic, debug bool) (err error) {
 	// Check if we can create the output file now to avoid loosing the extraction if we can not save it afterwards
 	var fd *os.File
@@ -180,7 +181,7 @@ func processSubsImages(ctx context.Context, imgSubs []ImageSubtitle, oaiClient o
 			return
 		}
 	} else {
-		if srtSubs, err = OCR(ctx, imgSubs, oaiClient, model, italic, debug); err != nil {
+		if srtSubs, err = OCR(ctx, imgSubs, nbWorkers, oaiClient, model, italic, debug); err != nil {
 			err = fmt.Errorf("OCR failed: %w", err)
 			return
 		}

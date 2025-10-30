@@ -9,6 +9,7 @@ require (
 	github.com/hekmon/liveprogress/v2 v2.1.0
 	github.com/mbiamont/go-pgs-parser v1.0.0
 	github.com/openai/openai-go v1.12.0
+	golang.org/x/sync v0.17.0
 	golang.org/x/text v0.29.0
 )
 

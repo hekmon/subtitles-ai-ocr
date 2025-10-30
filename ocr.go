@@ -10,6 +10,8 @@ import (
 	"os"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/hekmon/liveprogress/v2"
 	"github.com/openai/openai-go"
 )
@@ -40,7 +42,7 @@ type ImageSubtitle struct {
 	EndTime   time.Duration
 }
 
-func OCR(ctx context.Context, imgSubs []ImageSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
+func OCR(ctx context.Context, imgSubs []ImageSubtitle, nbWorkers int, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
 	// Progress bar
 	var (
 		totalPromptTokens     int64
@@ -76,28 +78,83 @@ func OCR(ctx context.Context, imgSubs []ImageSubtitle, client openai.Client, mod
 	defer liveprogress.RemoveBar(bar)
 	bypass := liveprogress.Bypass()
 	// Process each subtitle image and extract text using OCR.
+	//// Fan out
+	type TodoJob struct {
+		Index    int
+		Subtitle ImageSubtitle
+	}
+	todoJobs := make(chan TodoJob)
+	feederCtx, feederCtxCancel := context.WithCancel(ctx)
+	defer feederCtxCancel()
+	go func() {
+		for index, sub := range imgSubs {
+			select {
+			case todoJobs <- TodoJob{
+				Index:    index,
+				Subtitle: sub,
+			}:
+			case <-feederCtx.Done():
+				break
+			}
+		}
+		close(todoJobs)
+	}()
+	//// Fan in
 	txtSubs = make(SRTSubtitles, len(imgSubs))
-	var (
-		text             string
-		promptTokens     int64
-		completionTokens int64
-	)
-	for index, pg := range imgSubs {
-		if text, promptTokens, completionTokens, err = ExtractText(ctx, client, model, pg.Image, italic); err != nil {
-			err = fmt.Errorf("failed to extract text from image #%d: %s\n", index+1, err)
+	type DoneJob struct {
+		Index            int
+		Subtitle         SRTSubtitle
+		PromptTokens     int64
+		CompletionTokens int64
+	}
+	doneJobs := make(chan DoneJob)
+	go func() {
+		for job := range doneJobs {
+			txtSubs[job.Index] = job.Subtitle
+			totalPromptTokens += job.PromptTokens
+			totalCompletionTokens += job.CompletionTokens
+			if debug {
+				fmt.Fprintf(bypass, "#%d %s --> %s\n%s\n\n",
+					job.Index+1, job.Subtitle.Start, job.Subtitle.End, job.Subtitle.Text,
+				)
+			}
+			bar.CurrentIncrement()
+		}
+	}()
+	defer close(doneJobs) // release the fan in worker on exit
+	//// Workers
+	workers := new(errgroup.Group)
+	for range nbWorkers {
+		workers.Go(func() (err error) {
+			var (
+				text             string
+				promptTokens     int64
+				completionTokens int64
+			)
+			for job := range todoJobs {
+				text, promptTokens, completionTokens, err = ExtractText(ctx, client, model, job.Subtitle.Image, italic)
+				if err != nil {
+					err = fmt.Errorf("failed to extract text from image #%d: %s\n", job.Index+1, err)
+					return
+				}
+				doneJobs <- DoneJob{
+					Index: job.Index,
+					Subtitle: SRTSubtitle{
+						Start: SRTTimestamp(job.Subtitle.StartTime),
+						End:   SRTTimestamp(job.Subtitle.EndTime),
+						Text:  text,
+					},
+					PromptTokens:     promptTokens,
+					CompletionTokens: completionTokens,
+				}
+			}
 			return
-		}
-		totalPromptTokens += promptTokens
-		totalCompletionTokens += completionTokens
-		if debug {
-			fmt.Fprintf(bypass, "#%d %s --> %s\n%s\n\n", index+1, pg.StartTime, pg.EndTime, text)
-		}
-		txtSubs[index] = SRTSubtitle{
-			Start: SRTTimestamp(pg.StartTime),
-			End:   SRTTimestamp(pg.EndTime),
-			Text:  text,
-		}
-		bar.CurrentIncrement()
+		})
+	}
+	if err = workers.Wait(); err != nil {
+		feederCtxCancel() // stop the fan out worker
+		err = fmt.Errorf("a worker encountered an error: %w", err)
+		return
 	}
 	return
 }
