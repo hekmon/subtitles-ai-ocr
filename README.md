@@ -10,7 +10,7 @@ Once the subtitles are written to the `.srt` file, I recommend you to open it wi
 - Optimize it with the "Tools > Fix common errors" utility
 
 ```raw
-Usage of ./subtitles-ai-ocr:
+Usage of D:\Desktop\subtitles-ai-ocr.exe:
   -baseurl string
         OpenAI API base URL (default "https://api.openai.com/v1")
   -batch
@@ -29,6 +29,8 @@ Usage of ./subtitles-ai-ocr:
         Timeout for the OpenAI API requests (default 10m0s)
   -version
         show program version
+  -workers int
+        Number of parallel workers. Does nothing with batch mode. (default 1)
 ```
 
 ### Simple (OpenAI)
@@ -82,22 +84,18 @@ This example will use Ollama but you can use any self hosted inference server as
 #### Pre-requisites
 
 * Install [Ollama](https://ollama.com/).
-* Select the variant that fits on your available VRAM of the [Qwen2.5-VL model](https://ollama.com/library/qwen2.5vl).
-* For example, with 32GiB of VRAM, I am using the [32B variant](https://ollama.com/library/qwen2.5vl:32b)
-    * Model + 4k context consumes ~25,3GiB
-    * Model + 8k context consumes ~26,5GiB
-    * Model + 16k context consumes ~29,8GiB
-    * Model + 32k context consumes ~31,5GiB of VRAM but actually yields degraded performances as there is some layers offloaded to RAM (overflow)
-* If you are VRAM limited you can also check the [7B variant](https://ollama.com/library/qwen2.5vl:7b).
+* Select the variant that fits on your available VRAM of the [Qwen3-VL model](https://ollama.com/library/qwen3-vl).
+* For example, with 32GiB of VRAM, I am using the [30B MoE variant](https://ollama.com/library/qwen3-vl:30b)
+* If you are VRAM limited you can also check the [8B variant](hhttps://ollama.com/library/qwen3-vl:8b).
 
 #### Linux/MacOS
 
 ```bash
 # Validate the model and the runtime VRAM needs fits into your available VRAM
 # If you are sure it will fits, simply use `pull` instead of `run`
-ollama run qwen2.5vl:32b
+ollama run qwen3-vl:30b
 # Run the OCR with the validated model
-./subtitles-ai-ocr -baseurl http://127.0.0.1:11434/v1 -timeout 30s -model "qwen2.5vl:32b" -input /path/to/input/pgs/subtitle/file.sup -output /path/to/output/subtitle/file.srt -debug
+./subtitles-ai-ocr -baseurl http://127.0.0.1:11434/v1 -timeout 30s -model "qwen3-vl:30b" -input /path/to/input/pgs/subtitle/file.sup -output /path/to/output/subtitle/file.srt -debug
 ```
 
 #### Windows
@@ -107,9 +105,9 @@ Using the command line (`cmd.exe`):
 ```bat
 :: Validate the model and the runtime VRAM needs fits into your available VRAM
 :: If you are sure it will fits, simply use `pull` instead of `run`
-ollama run qwen2.5vl:32b
+ollama run qwen3-vl:30b
 :: Run the OCR with the validated model
-.\subtitles-ai-ocr.exe -baseurl http://127.0.0.1:11434/v1 -timeout 30s -model "qwen2.5vl:32b" -input C:\path\to\input\pgs\subtitle\file.sup -output C:\path\to\output\subtitle\file.srt -debug
+.\subtitles-ai-ocr.exe -baseurl http://127.0.0.1:11434/v1 -timeout 30s -model "qwen3-vl:30b" -input C:\path\to\input\pgs\subtitle\file.sup -output C:\path\to\output\subtitle\file.srt -debug
 ```
 
 ## Going further
