@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/errgroup"
@@ -32,8 +33,6 @@ non_italic_word_1 <i>italic_word_1 italic_word_2 ... italic_word_n</i> non_itali
 If the italic words span on multiples lines, use the following format:
 non_italic_word_1 <i>italic_word_1
 italic_word_2 ... italic_word_n</i> non_italic_word_2`
-
-	temperature = 0.1
 )
 
 type ImageSubtitle struct {
@@ -44,24 +43,6 @@ type ImageSubtitle struct {
 
 func OCR(ctx context.Context, imgSubs []ImageSubtitle, nbWorkers int, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
 	// Progress bar
-	var (
-		totalPromptTokens     int64
-		totalCompletionTokens int64
-	)
-	if err = liveprogress.Start(); err != nil {
-		err = fmt.Errorf("failed to start live progress: %w", err)
-		return
-	}
-	defer func() {
-		var clear bool
-		if err == nil {
-			clear = true
-		}
-		if err := liveprogress.Stop(clear); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to stop live progress: %s\n", err)
-		}
-		fmt.Printf("%s model tokens used: prompt=%d, completion=%d\n", model, totalPromptTokens, totalCompletionTokens)
-	}()
 	bar := liveprogress.SetMainLineAsBar(
 		liveprogress.WithTotal(uint64(len(imgSubs))),
 		liveprogress.WithMultiplyRunes(),
@@ -77,8 +58,29 @@ func OCR(ctx context.Context, imgSubs []ImageSubtitle, nbWorkers int, client ope
 	)
 	defer liveprogress.RemoveBar(bar)
 	bypass := liveprogress.Bypass()
-	// Process each subtitle image and extract text using OCR.
-	//// Fan out
+	if err = liveprogress.Start(); err != nil {
+		err = fmt.Errorf("failed to start live progress: %w", err)
+		return
+	}
+	// End log
+	var (
+		totalPromptTokens     atomic.Int64
+		totalCompletionTokens atomic.Int64
+	)
+	defer func() {
+		var clear bool
+		if err == nil {
+			clear = true
+		}
+		if err := liveprogress.Stop(clear); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to stop live progress: %s\n", err)
+		}
+		fmt.Printf("%q model tokens used: prompt=%d, completion=%d\n",
+			model, totalPromptTokens.Load(), totalCompletionTokens.Load(),
+		)
+	}()
+	// Process each subtitle image and extract text using AI OCR
+	//// feeder worker
 	type TodoJob struct {
 		Index    int
 		Subtitle ImageSubtitle
@@ -99,33 +101,11 @@ func OCR(ctx context.Context, imgSubs []ImageSubtitle, nbWorkers int, client ope
 			}
 		}
 	}()
-	//// Fan in
+	//// ocr workers
 	txtSubs = make(SRTSubtitles, len(imgSubs))
-	type DoneJob struct {
-		Index            int
-		Subtitle         SRTSubtitle
-		PromptTokens     int64
-		CompletionTokens int64
-	}
-	doneJobs := make(chan DoneJob)
-	go func() {
-		for job := range doneJobs {
-			txtSubs[job.Index] = job.Subtitle
-			totalPromptTokens += job.PromptTokens
-			totalCompletionTokens += job.CompletionTokens
-			if debug {
-				fmt.Fprintf(bypass, "#%d %s --> %s\n%s\n\n",
-					job.Index+1, job.Subtitle.Start, job.Subtitle.End, job.Subtitle.Text,
-				)
-			}
-			bar.CurrentIncrement()
-		}
-	}()
-	defer close(doneJobs) // release the fan in worker on exit
-	//// Workers
-	workers := new(errgroup.Group)
+	ocrWorkers := new(errgroup.Group)
 	for range nbWorkers {
-		workers.Go(func() (err error) {
+		ocrWorkers.Go(func() (err error) {
 			var (
 				text             string
 				promptTokens     int64
@@ -137,22 +117,25 @@ func OCR(ctx context.Context, imgSubs []ImageSubtitle, nbWorkers int, client ope
 					err = fmt.Errorf("failed to extract text from image #%d: %s\n", job.Index+1, err)
 					return
 				}
-				doneJobs <- DoneJob{
-					Index: job.Index,
-					Subtitle: SRTSubtitle{
-						Start: SRTTimestamp(job.Subtitle.StartTime),
-						End:   SRTTimestamp(job.Subtitle.EndTime),
-						Text:  text,
-					},
-					PromptTokens:     promptTokens,
-					CompletionTokens: completionTokens,
+				txtSubs[job.Index] = SRTSubtitle{
+					Start: SRTTimestamp(job.Subtitle.StartTime),
+					End:   SRTTimestamp(job.Subtitle.EndTime),
+					Text:  text,
+				}
+				totalPromptTokens.Add(promptTokens)
+				totalCompletionTokens.Add(completionTokens)
+				bar.CurrentIncrement()
+				if debug {
+					fmt.Fprintf(bypass, "#%d %s --> %s\n%s\n\n",
+						job.Index+1, job.Subtitle.StartTime, job.Subtitle.EndTime, text,
+					)
 				}
 			}
 			return
 		})
 	}
-	if err = workers.Wait(); err != nil {
-		feederCtxCancel() // stop the fan out worker
+	if err = ocrWorkers.Wait(); err != nil {
+		feederCtxCancel() // stop the feeder worker early if a worker encountered an error
 		err = fmt.Errorf("a worker encountered an error: %w", err)
 		return
 	}
