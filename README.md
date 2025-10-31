@@ -110,6 +110,35 @@ ollama run qwen3-vl:30b
 .\subtitles-ai-ocr.exe -baseurl http://127.0.0.1:11434/v1 -timeout 30s -model "qwen3-vl:30b" -input C:\path\to\input\pgs\subtitle\file.sup -output C:\path\to\output\subtitle\file.srt -debug
 ```
 
+#### Increase throughput with vLLM
+
+If you are going with more advanced deployment with, for example, vLLM and high perf & high quality NVFP4 quantization: you can experiment with the `-workers` flag.
+
+In this example I will be using [Qwen3-VL-30B-A3B-Instruct-NVFP4](https://huggingface.co/ig1/Qwen3-VL-30B-A3B-Instruct-NVFP4) deployed in Docker Desktop with WSL2 and a RTX 5090 (follow the model readme on HF).
+
+Once the model is deployed and vLLM started within Docker Desktop, start the program with 70 workers:
+
+```powershell
+C:\Users\hekmon>D:\Desktop\subtitles-ai-ocr.exe -baseurl "http://127.0.0.1:8000/v1" -model "Qwen3-VL-30B-A3B" -timeout 30s -workers 70 -input E:\Vidéo\LSELO\A1_t00_track5_[fre].sub
+```
+
+vLLM and NVFP4 will maximize concurrent requests and total throughput:
+
+```text
+(APIServer pid=1) INFO 10-30 15:46:40 [loggers.py:208] Engine 000: Avg prompt throughput: 16440.5 tokens/s, Avg generation throughput: 395.6 tokens/s, Running: 55 reqs, Waiting: 0 reqs, GPU KV cache usage: 47.1%, Prefix cache hit rate: 22.8%, MM cache hit rate: 3.8%
+(APIServer pid=1) INFO 10-30 15:46:50 [loggers.py:208] Engine 000: Avg prompt throughput: 15850.0 tokens/s, Avg generation throughput: 437.8 tokens/s, Running: 54 reqs, Waiting: 3 reqs, GPU KV cache usage: 47.4%, Prefix cache hit rate: 22.8%, MM cache hit rate: 3.9%
+(APIServer pid=1) INFO 10-30 15:47:00 [loggers.py:208] Engine 000: Avg prompt throughput: 14865.2 tokens/s, Avg generation throughput: 408.8 tokens/s, Running: 66 reqs, Waiting: 0 reqs, GPU KV cache usage: 58.5%, Prefix cache hit rate: 22.5%, MM cache hit rate: 3.3%
+```
+
+Allowing a thousand subs to be decoded in only 35 seconds:
+
+```text
+Parsing VobSub file "A1_t00_track5_[fre].sub"
+VobSub file parsed. Total subs: 1057
+Qwen3-VL-30B-A3B model tokens used: prompt=547526, completion=14779
+OCR completed in 35.0095678s
+```
+
 ## Going further
 
 Checkout [subtitles-ai-translator](https://github.com/hekmon/subtitles-ai-translator)!
