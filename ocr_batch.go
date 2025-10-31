@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/hekmon/liveprogress/v2"
-	"github.com/openai/openai-go"
+	"github.com/openai/openai-go/v3"
 )
 
 const (
