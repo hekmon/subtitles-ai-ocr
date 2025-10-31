@@ -110,7 +110,7 @@ ollama run qwen3-vl:30b
 .\subtitles-ai-ocr.exe -baseurl http://127.0.0.1:11434/v1 -timeout 30s -model "qwen3-vl:30b" -input C:\path\to\input\pgs\subtitle\file.sup -output C:\path\to\output\subtitle\file.srt -debug
 ```
 
-#### Increase throughput with vLLM
+### Advanced (high performance)
 
 If you are going with more advanced deployment with, for example, vLLM and high perf & high quality NVFP4 quantization: you can experiment with the `-workers` flag.
 
