@@ -87,6 +87,7 @@ func OCR(ctx context.Context, imgSubs []ImageSubtitle, nbWorkers int, client ope
 	feederCtx, feederCtxCancel := context.WithCancel(ctx)
 	defer feederCtxCancel()
 	go func() {
+		defer close(todoJobs)
 		for index, sub := range imgSubs {
 			select {
 			case todoJobs <- TodoJob{
@@ -94,10 +95,9 @@ func OCR(ctx context.Context, imgSubs []ImageSubtitle, nbWorkers int, client ope
 				Subtitle: sub,
 			}:
 			case <-feederCtx.Done():
-				break
+				return
 			}
 		}
-		close(todoJobs)
 	}()
 	//// Fan in
 	txtSubs = make(SRTSubtitles, len(imgSubs))
