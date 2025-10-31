@@ -195,9 +195,6 @@ func generateOCRBodyRequest(img image.Image, model string, italic bool) (body op
 			},
 		},
 		Model: model,
-		// Temperature: param.Opt[float64]{
-		// 	Value: temperature,
-		// },
 	}
 	return
 }
