@@ -86,7 +86,7 @@ This example will use Ollama but you can use any self hosted inference server as
 * Install [Ollama](https://ollama.com/).
 * Select the variant that fits on your available VRAM of the [Qwen3-VL model](https://ollama.com/library/qwen3-vl).
 * For example, with 32GiB of VRAM, I am using the [30B MoE variant](https://ollama.com/library/qwen3-vl:30b)
-* If you are VRAM limited you can also check the [8B variant](hhttps://ollama.com/library/qwen3-vl:8b).
+* If you are VRAM limited you can also check the [8B variant](https://ollama.com/library/qwen3-vl:8b).
 
 #### Linux/MacOS
 
