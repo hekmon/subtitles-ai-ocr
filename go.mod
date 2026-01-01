@@ -5,7 +5,7 @@ go 1.24.2
 // replace github.com/hekmon/go-vobsub => ../go-vobsub
 
 require (
-	github.com/hekmon/go-vobsub v1.0.0
+	github.com/hekmon/go-vobsub v1.0.1
 	github.com/hekmon/liveprogress/v2 v2.1.0
 	github.com/mbiamont/go-pgs-parser v1.0.0
 	github.com/openai/openai-go/v3 v3.7.0

@@ -2,8 +2,8 @@ github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiE
 github.com/aymanbagabas/go-osc52/v2 v2.0.1/go.mod h1:uYgXzlJ7ZpABp8OJ+exZzJJhRNQ2ASbcXHWsFqH8hp8=
 github.com/clipperhouse/uax29/v2 v2.2.0 h1:ChwIKnQN3kcZteTXMgb1wztSgaU+ZemkgWdohwgs8tY=
 github.com/clipperhouse/uax29/v2 v2.2.0/go.mod h1:EFJ2TJMRUaplDxHKj1qAEhCtQPW2tJSwu5BF98AuoVM=
-github.com/hekmon/go-vobsub v1.0.0 h1:ysHPDpUbIFFxS4sJzpYQ+02YQE82n+jS49XG75DmMc8=
-github.com/hekmon/go-vobsub v1.0.0/go.mod h1:BxOMw5/UYIO8Z/8PMvwkY15cYv/cobeZAx4hQ8BLfKs=
+github.com/hekmon/go-vobsub v1.0.1 h1:LNs8AKCCMxG/lOWalNBdSCWa1ubrXKMj62tHoaCeLKQ=
+github.com/hekmon/go-vobsub v1.0.1/go.mod h1:BxOMw5/UYIO8Z/8PMvwkY15cYv/cobeZAx4hQ8BLfKs=
 github.com/hekmon/liveprogress/v2 v2.1.0 h1:YniZzewb89l46XcUmzhnGsDCZxNBXsm8apQmKpaNenI=
 github.com/hekmon/liveprogress/v2 v2.1.0/go.mod h1:aA4kYOPmXc/jiTQNwO6XjSiGP1rdkI52/Mk6bHAXoYE=
 github.com/hekmon/liveterm/v2 v2.5.0 h1:beEBHsEesf2Eo/vD4b4wakIj6rZt0cjrjxRI8CJpcYM=
