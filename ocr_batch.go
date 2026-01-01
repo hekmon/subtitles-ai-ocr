@@ -39,7 +39,7 @@ func (bc batchContent) Reader() (r io.Reader, err error) {
 	return
 }
 
-func OCRBatched(ctx context.Context, imgSubs []ImageSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
+func OCRBatched(ctx context.Context, imgSubs []ImageSubtitle, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, totalPromptTokens, totalCompletionTokens int64, err error) {
 	// Create the batches
 	var line string
 	batches := make([]batchContent, 0, len(imgSubs)/batchMaxRequests+1)
@@ -128,10 +128,6 @@ func OCRBatched(ctx context.Context, imgSubs []ImageSubtitle, client openai.Clie
 	start := time.Now()
 	maxEndTime := start.Add(maxWaitDuration)
 	// Prepare progress bar
-	var (
-		totalPromptTokens     int64
-		totalCompletionTokens int64
-	)
 	if err = liveprogress.Start(); err != nil {
 		err = fmt.Errorf("failed to start live progress: %w", err)
 		return
@@ -144,7 +140,6 @@ func OCRBatched(ctx context.Context, imgSubs []ImageSubtitle, client openai.Clie
 		if err := liveprogress.Stop(clear); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to stop live progress: %s\n", err)
 		}
-		fmt.Printf("%s model tokens used: prompt=%d, completion=%d\n", model, totalPromptTokens, totalCompletionTokens)
 	}()
 	bar := liveprogress.SetMainLineAsCustomLine(func() string {
 		var nbOK int

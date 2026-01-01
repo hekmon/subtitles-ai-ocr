@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math"
 	"net/url"
 	"os"
 	"os/signal"
@@ -173,20 +174,32 @@ func processSubsImages(ctx context.Context, imgSubs []ImageSubtitle, nbWorkers i
 	defer fd.Close()
 	// Prepare OCR via AI
 	liveprogress.RefreshInterval = 500 * time.Millisecond
-	var srtSubs SRTSubtitles
+	var (
+		srtSubs          SRTSubtitles
+		promptTokens     int64
+		completionTokens int64
+	)
 	start := time.Now()
 	if batch {
-		if srtSubs, err = OCRBatched(ctx, imgSubs, oaiClient, model, italic, debug); err != nil {
+		if srtSubs, promptTokens, completionTokens, err = OCRBatched(ctx, imgSubs, oaiClient, model, italic, debug); err != nil {
 			err = fmt.Errorf("batched OCR failed: %w", err)
 			return
 		}
 	} else {
-		if srtSubs, err = OCR(ctx, imgSubs, nbWorkers, oaiClient, model, italic, debug); err != nil {
+		if srtSubs, promptTokens, completionTokens, err = OCR(ctx, imgSubs, nbWorkers, oaiClient, model, italic, debug); err != nil {
 			err = fmt.Errorf("OCR failed: %w", err)
 			return
 		}
 	}
-	fmt.Printf("OCR completed in %v\n", time.Since(start))
+	duration := time.Since(start)
+	fmt.Printf("OCR completed in %v\n", duration.Round(time.Millisecond))
+	fmt.Printf("%q model statistics:\n", model)
+	fmt.Printf("\tprompt tokens:     %d (~%.0f tokens/s)\n",
+		promptTokens, math.Round(float64(promptTokens)/duration.Seconds()),
+	)
+	fmt.Printf("\tgeneration tokens: %d (~%.0f tokens/s)\n",
+		completionTokens, math.Round(float64(completionTokens)/duration.Seconds()),
+	)
 	// Step 3 - Write SRT file
 	if err = srtSubs.Marshal(fd); err != nil {
 		err = fmt.Errorf("failed to write SRT: %s\n", err)

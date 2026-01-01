@@ -41,7 +41,7 @@ type ImageSubtitle struct {
 	EndTime   time.Duration
 }
 
-func OCR(ctx context.Context, imgSubs []ImageSubtitle, nbWorkers int, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, err error) {
+func OCR(ctx context.Context, imgSubs []ImageSubtitle, nbWorkers int, client openai.Client, model string, italic, debug bool) (txtSubs SRTSubtitles, promptTokens, completionTokens int64, err error) {
 	// Progress bar
 	bar := liveprogress.SetMainLineAsBar(
 		liveprogress.WithTotal(uint64(len(imgSubs))),
@@ -75,9 +75,8 @@ func OCR(ctx context.Context, imgSubs []ImageSubtitle, nbWorkers int, client ope
 		if err := liveprogress.Stop(clear); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to stop live progress: %s\n", err)
 		}
-		fmt.Printf("%q model tokens used: prompt=%d, completion=%d\n",
-			model, totalPromptTokens.Load(), totalCompletionTokens.Load(),
-		)
+		promptTokens = totalPromptTokens.Load()
+		completionTokens = totalCompletionTokens.Load()
 	}()
 	// Process each subtitle image and extract text using AI OCR
 	//// feeder worker
