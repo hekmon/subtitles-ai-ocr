@@ -119,24 +119,39 @@ In this example I will be using [Qwen3-VL-30B-A3B-Instruct-NVFP4](https://huggin
 Once the model is deployed and vLLM started within Docker Desktop, start the program with 70 workers:
 
 ```powershell
-C:\Users\hekmon>D:\Desktop\subtitles-ai-ocr.exe -baseurl "http://127.0.0.1:8000/v1" -model "Qwen3-VL-30B-A3B" -timeout 30s -workers 70 -input E:\Vidéo\LSELO\A1_t00_track5_[fre].sub
+for ($i = 1; $i -le 24; $i++) {
+    $episode = "e{0:d2}" -f $i
+    $inputFile = "E:\Vidéo\Jujutsu Kaisen S01\${episode}_track3_[fre].sup"
+    
+    & "D:\Desktop\subtitles-ai-ocr.exe" -baseurl "http://127.0.0.1:8000/v1" -model "Qwen3-VL-30B-A3B" -timeout 60s -workers 70 -input "E:\Vidéo\Jujutsu Kaisen S01\${episode}_track3_[fre].sup"
+} 
 ```
 
 vLLM and NVFP4 will maximize concurrent requests and total throughput:
 
 ```text
-(APIServer pid=1) INFO 10-30 15:46:40 [loggers.py:208] Engine 000: Avg prompt throughput: 16440.5 tokens/s, Avg generation throughput: 395.6 tokens/s, Running: 55 reqs, Waiting: 0 reqs, GPU KV cache usage: 47.1%, Prefix cache hit rate: 22.8%, MM cache hit rate: 3.8%
-(APIServer pid=1) INFO 10-30 15:46:50 [loggers.py:208] Engine 000: Avg prompt throughput: 15850.0 tokens/s, Avg generation throughput: 437.8 tokens/s, Running: 54 reqs, Waiting: 3 reqs, GPU KV cache usage: 47.4%, Prefix cache hit rate: 22.8%, MM cache hit rate: 3.9%
-(APIServer pid=1) INFO 10-30 15:47:00 [loggers.py:208] Engine 000: Avg prompt throughput: 14865.2 tokens/s, Avg generation throughput: 408.8 tokens/s, Running: 66 reqs, Waiting: 0 reqs, GPU KV cache usage: 58.5%, Prefix cache hit rate: 22.5%, MM cache hit rate: 3.3%
+[loggers.py:248] Engine 000: Avg prompt throughput: 17015.0 tokens/s, Avg generation throughput: 889.6 tokens/s, Running: 52 reqs, Waiting: 0 reqs, GPU KV cache usage: 11.5%, Prefix cache hit rate: 53.6%, MM cache hit rate: 9.0%
+[loggers.py:248] Engine 000: Avg prompt throughput: 17060.3 tokens/s, Avg generation throughput: 894.1 tokens/s, Running: 61 reqs, Waiting: 0 reqs, GPU KV cache usage: 13.9%, Prefix cache hit rate: 53.6%, MM cache hit rate: 3.7%
+[loggers.py:248] Engine 000: Avg prompt throughput: 15035.4 tokens/s, Avg generation throughput: 836.8 tokens/s, Running: 35 reqs, Waiting: 1 reqs, GPU KV cache usage: 5.8%, Prefix cache hit rate: 53.6%, MM cache hit rate: 5.7%
+[loggers.py:248] Engine 000: Avg prompt throughput: 16897.8 tokens/s, Avg generation throughput: 878.3 tokens/s, Running: 59 reqs, Waiting: 0 reqs, GPU KV cache usage: 12.2%, Prefix cache hit rate: 53.6%, MM cache hit rate: 5.7%
+[loggers.py:248] Engine 000: Avg prompt throughput: 17367.0 tokens/s, Avg generation throughput: 925.5 tokens/s, Running: 15 reqs, Waiting: 0 reqs, GPU KV cache usage: 4.1%, Prefix cache hit rate: 54.9%, MM cache hit rate: 7.5%
+[loggers.py:248] Engine 000: Avg prompt throughput: 14996.4 tokens/s, Avg generation throughput: 808.3 tokens/s, Running: 21 reqs, Waiting: 0 reqs, GPU KV cache usage: 3.7%, Prefix cache hit rate: 53.2%, MM cache hit rate: 4.6%
+[loggers.py:248] Engine 000: Avg prompt throughput: 17703.6 tokens/s, Avg generation throughput: 930.9 tokens/s, Running: 56 reqs, Waiting: 0 reqs, GPU KV cache usage: 12.3%, Prefix cache hit rate: 53.1%, MM cache hit rate: 3.6%
+[loggers.py:248] Engine 000: Avg prompt throughput: 15815.0 tokens/s, Avg generation throughput: 831.5 tokens/s, Running: 61 reqs, Waiting: 0 reqs, GPU KV cache usage: 14.2%, Prefix cache hit rate: 53.4%, MM cache hit rate: 4.1%
+[loggers.py:248] Engine 000: Avg prompt throughput: 16363.9 tokens/s, Avg generation throughput: 869.3 tokens/s, Running: 60 reqs, Waiting: 0 reqs, GPU KV cache usage: 12.6%, Prefix cache hit rate: 53.4%, MM cache hit rate: 3.9%
 ```
 
-Allowing a thousand subs to be decoded in only 35 seconds:
+Allowing a complete season to be OCR in less than 3 minutes:
 
 ```text
-Parsing VobSub file "A1_t00_track5_[fre].sub"
-VobSub file parsed. Total subs: 1057
-Qwen3-VL-30B-A3B model tokens used: prompt=547526, completion=14779
-OCR completed in 35.0095678s
+[...]
+Parsing PGS file "e24_track3_[fre].sup"
+PGS file parsed. Total subs: 375
+OCR completed in 4.232s
+"Qwen3-VL-30B-A3B" model statistics:
+        prompt tokens:     79846 (~18868 tokens/s)
+        generation tokens: 4270 (~1009 tokens/s)
+SRT written to "E:\\Vidéo\\Jujutsu Kaisen S01\\e24_track3_[fre].srt"
 ```
 
 ## Going further
