@@ -123,8 +123,6 @@ Once the model is deployed and vLLM started within Docker Desktop, start the pro
 ```powershell
 for ($i = 1; $i -le 24; $i++) {
     $episode = "e{0:d2}" -f $i
-    $inputFile = "E:\Vidéo\Jujutsu Kaisen S01\${episode}_track3_[fre].sup"
-    
     & "D:\Desktop\subtitles-ai-ocr.exe" -baseurl "http://127.0.0.1:8000/v1" -model "Qwen3-VL-30B-A3B" -timeout 60s -workers 70 -input "E:\Vidéo\Jujutsu Kaisen S01\${episode}_track3_[fre].sup"
 } 
 ```
