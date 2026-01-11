@@ -116,7 +116,9 @@ If you are going with more advanced deployment with, for example, vLLM and high 
 
 In this example I will be using [Qwen3-VL-30B-A3B-Instruct-NVFP4](https://huggingface.co/ig1/Qwen3-VL-30B-A3B-Instruct-NVFP4) deployed in Docker Desktop with WSL2 and a RTX 5090 (follow the model readme on HF).
 
-Once the model is deployed and vLLM started within Docker Desktop, start the program with 70 workers:
+It has a high loading time in order to be highly performant during inference, use it when you have a batch of files to process.
+
+Once the model is deployed and vLLM started within Docker Desktop, start the program with 70 workers and loop thru all the files that needs to be processed (example in powershell):
 
 ```powershell
 for ($i = 1; $i -le 24; $i++) {
