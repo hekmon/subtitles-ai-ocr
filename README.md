@@ -143,7 +143,7 @@ vLLM and NVFP4 will maximize concurrent requests and total throughput:
 [loggers.py:248] Engine 000: Avg prompt throughput: 16363.9 tokens/s, Avg generation throughput: 869.3 tokens/s, Running: 60 reqs, Waiting: 0 reqs, GPU KV cache usage: 12.6%, Prefix cache hit rate: 53.4%, MM cache hit rate: 3.9%
 ```
 
-Allowing a complete season to be OCR in less than 3 minutes:
+Allowing a complete season to be processed in less than 3 minutes:
 
 ```text
 [...]
