@@ -6,17 +6,17 @@ go 1.24.2
 
 require (
 	github.com/hekmon/go-vobsub v1.0.1
-	github.com/hekmon/liveprogress/v2 v2.1.0
+	github.com/hekmon/liveprogress/v2 v2.2.1
 	github.com/mbiamont/go-pgs-parser v1.0.0
-	github.com/openai/openai-go/v3 v3.7.0
-	golang.org/x/sync v0.17.0
-	golang.org/x/text v0.30.0
+	github.com/openai/openai-go/v3 v3.21.0
+	golang.org/x/sync v0.19.0
+	golang.org/x/text v0.34.0
 )
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
-	github.com/hekmon/liveterm/v2 v2.5.0 // indirect
+	github.com/clipperhouse/uax29/v2 v2.6.0 // indirect
+	github.com/hekmon/liveterm/v2 v2.6.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.19 // indirect
@@ -27,5 +27,5 @@ require (
 	github.com/tidwall/match v1.2.0 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
-	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 )
