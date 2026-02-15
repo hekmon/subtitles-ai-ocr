@@ -150,10 +150,21 @@ func ExtractText(ctx context.Context, client openai.Client, model string, img im
 		return
 	}
 	// Ask model for text extraction
-	chatCompletion, err := client.Chat.Completions.New(ctx, body)
-	if err != nil {
-		err = fmt.Errorf("failed to get OCR chat completion: %w", err)
-		return
+	nbRetries := 3
+	var chatCompletion *openai.ChatCompletion
+	for retry := range nbRetries {
+		if chatCompletion, err = client.Chat.Completions.New(ctx, body); err != nil {
+			if retry == nbRetries-1 {
+				err = fmt.Errorf("failed to get OCR chat completion: %w", err)
+				return
+			}
+			fmt.Fprintf(liveprogress.Bypass(),
+				"retrying OCR request (%d/%d) after error: %s\n",
+				retry+1, nbRetries, err.Error(),
+			)
+		} else {
+			break
+		}
 	}
 	text = chatCompletion.Choices[0].Message.Content
 	promptTokens = chatCompletion.Usage.PromptTokens
