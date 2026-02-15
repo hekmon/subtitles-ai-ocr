@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hekmon/liveprogress/v2"
@@ -290,14 +291,14 @@ waitLoop:
 			txtSubs[subIndex] = SRTSubtitle{
 				Start: SRTTimestamp(imgSubs[subIndex].StartTime),
 				End:   SRTTimestamp(imgSubs[subIndex].EndTime),
-				Text:  line.Response.Body.Choices[0].Message.Content,
+				Text:  strings.TrimSpace(line.Response.Body.Choices[0].Message.Content),
 			}
 			totalPromptTokens += line.Response.Body.Usage.PromptTokens
 			totalCompletionTokens += line.Response.Body.Usage.CompletionTokens
 			if debug {
 				fmt.Fprintf(bypass, "#%d %s --> %s (batch #%d)\n%s\n\n",
 					subIndex+1, imgSubs[subIndex].StartTime, imgSubs[subIndex].EndTime, batchIndex,
-					line.Response.Body.Choices[0].Message.Content,
+					strings.TrimSpace(line.Response.Body.Choices[0].Message.Content),
 				)
 			}
 		}

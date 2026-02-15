@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/png"
 	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -166,7 +167,7 @@ func ExtractText(ctx context.Context, client openai.Client, model string, img im
 			break
 		}
 	}
-	text = chatCompletion.Choices[0].Message.Content
+	text = strings.TrimSpace(chatCompletion.Choices[0].Message.Content)
 	promptTokens = chatCompletion.Usage.PromptTokens
 	completionTokens = chatCompletion.Usage.CompletionTokens
 	return
