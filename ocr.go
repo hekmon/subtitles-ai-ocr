@@ -22,7 +22,7 @@ const (
 Do not use quotes, do not provide comments, and do not add any additional content beyond the extracted text from the image.
 Do not reformulate, write the text exactly as it is on the image even if it is an incomplete sentence. Respect the line breaks.
 Maintain the original formatting and line breaks without adding extra spaces or line breaks.
-If there is no text, simply return an empty string, do not comment it.
+If there is no text (e.g. only an image with no text or a blank image), simply return an empty string and NEVER comment it.
 If the user input do not contains any text, simply extract the text from the image. Otherwise consider user instruction as additionnal rules to follow.`
 
 	italicPrompt = `When formatting text, if a single word is in italics, use the following format to mark it:
