@@ -8,18 +8,18 @@ require (
 	github.com/hekmon/go-vobsub v1.0.1
 	github.com/hekmon/liveprogress/v2 v2.2.1
 	github.com/mbiamont/go-pgs-parser v1.0.0
-	github.com/openai/openai-go/v3 v3.21.0
+	github.com/openai/openai-go/v3 v3.22.0
 	golang.org/x/sync v0.19.0
 	golang.org/x/text v0.34.0
 )
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
-	github.com/clipperhouse/uax29/v2 v2.6.0 // indirect
+	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/hekmon/liveterm/v2 v2.6.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/mattn/go-runewidth v0.0.19 // indirect
+	github.com/mattn/go-runewidth v0.0.20 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
