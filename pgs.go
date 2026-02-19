@@ -19,8 +19,9 @@ func ParsePGSFile(filePath string) (subs []ImageSubtitle, err error) {
 		if imageData != nil {
 			// We got a new image so this should be the start of a new sub
 			if currentSub != nil {
-				fmt.Printf("WARNING: got an image without a previous end time for the previous sub: overwriting (current valid subs: %d)\n", len(subs))
-				currentSub = nil
+				// Previous sub didn't have an explicit end time, use this new sub's start time (minus 1ms) as its end time
+				currentSub.EndTime = startTime - time.Millisecond
+				subs = append(subs, *currentSub)
 			}
 			currentSub = &ImageSubtitle{
 				Image:     imageData.Image,
